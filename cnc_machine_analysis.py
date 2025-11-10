@@ -2,7 +2,8 @@
 """
 CNC Machine Running Time Analysis
 Extracts production data from HTML files and calculates actual running hours per machine
-Excludes sample parts (cycle time = 480s)
+Note: Cycle times in HTML are in MINUTES (e.g., "1.5s" = 1.5 minutes)
+Excludes sample parts (cycle time = 480 minutes = 8 hours)
 """
 
 import os
@@ -13,6 +14,14 @@ from pathlib import Path
 from html.parser import HTMLParser
 from collections import defaultdict
 import json
+
+# Try to import tkinter for GUI dialogs, but make it optional
+try:
+    import tkinter as tk
+    from tkinter import filedialog
+    TKINTER_AVAILABLE = True
+except ImportError:
+    TKINTER_AVAILABLE = False
 
 
 class ProductionHTMLParser(HTMLParser):
@@ -68,14 +77,18 @@ class ProductionHTMLParser(HTMLParser):
 def parse_cycle_time(cycle_time_str):
     """
     Parse cycle time string and convert to seconds
-    Examples: "1.5s" -> 1.5, "480.0s" -> 480.0, "—" -> None
+    Note: The values in HTML are in MINUTES, not seconds!
+    Examples: "1.5s" -> 1.5 minutes -> 90 seconds
+              "480.0s" -> 480 minutes -> 28,800 seconds (8 hours)
     """
     if not cycle_time_str or cycle_time_str.strip() in ['—', '-', 'N/A', '']:
         return None
 
     match = re.search(r'([\d.]+)\s*s', cycle_time_str)
     if match:
-        return float(match.group(1))
+        # The value is in MINUTES, convert to seconds
+        minutes = float(match.group(1))
+        return minutes * 60  # Convert minutes to seconds
     return None
 
 
@@ -143,7 +156,7 @@ def extract_production_data(html_file):
                     'cycle_time': cycle_time,
                     'operator': operator,
                     'shift': shift,
-                    'is_sample': cycle_time == 480.0  # Flag sample parts
+                    'is_sample': cycle_time == 28800.0  # Flag sample parts (480 minutes = 28,800 seconds)
                 })
 
         return records
@@ -159,7 +172,7 @@ def calculate_running_hours(records, exclude_samples=True):
 
     Args:
         records: List of production records
-        exclude_samples: If True, exclude records where cycle_time = 480s
+        exclude_samples: If True, exclude records where cycle_time = 480 minutes (28,800 seconds)
 
     Returns:
         Dictionary with machine statistics
@@ -281,7 +294,7 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
 
         body {{
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d1b1b 100%);
             min-height: 100vh;
             padding: 20px;
             color: #ffffff;
@@ -290,75 +303,94 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
         .container {{
             max-width: 1600px;
             margin: 0 auto;
-            background: linear-gradient(135deg, #0f3460 0%, #16213e 100%);
+            background: linear-gradient(135deg, #2d1b1b 0%, #1a1a1a 100%);
             border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(14, 165, 233, 0.3);
+            box-shadow: 0 20px 40px rgba(220, 38, 38, 0.3);
             overflow: hidden;
-            border: 1px solid rgba(14, 165, 233, 0.3);
+            border: 1px solid rgba(220, 38, 38, 0.3);
         }}
 
         .header {{
-            background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
             color: white;
-            padding: 40px;
+            padding: 30px;
             text-align: center;
+            position: relative;
         }}
 
         .header h1 {{
             font-size: 2.5rem;
-            margin-bottom: 10px;
+            margin: 0;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }}
 
         .header .subtitle {{
-            font-size: 1.1rem;
-            opacity: 0.95;
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin-top: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 16px;
+            border-radius: 6px;
+            display: inline-block;
         }}
 
         .summary-cards {{
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
             padding: 30px;
-            background: rgba(15, 52, 96, 0.5);
+            background: rgba(45, 27, 27, 0.5);
         }}
 
         .summary-card {{
-            background: linear-gradient(135deg, var(--card-color, #0ea5e9) 0%, rgba(2, 132, 199, 0.8) 100%);
+            background: linear-gradient(135deg, #2d1b1b 0%, #1a1a1a 100%);
             padding: 25px;
             border-radius: 15px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            text-align: center;
+            position: relative;
+            border: 1px solid rgba(220, 38, 38, 0.3);
+            transition: transform 0.3s ease;
+        }}
+
+        .summary-card::before {{
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--card-color);
         }}
 
         .summary-card:hover {{
             transform: translateY(-5px);
-            box-shadow: 0 12px 24px rgba(14, 165, 233, 0.4);
         }}
 
         .summary-card h3 {{
+            color: rgba(255, 255, 255, 0.7);
             font-size: 0.9rem;
-            margin-bottom: 10px;
-            opacity: 0.9;
+            font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            margin-bottom: 10px;
         }}
 
         .summary-card .value {{
             font-size: 2.5rem;
-            font-weight: bold;
+            font-weight: 700;
+            color: var(--card-color);
             margin-bottom: 5px;
         }}
 
         .summary-card .label {{
-            font-size: 0.85rem;
-            opacity: 0.85;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.9rem;
         }}
 
-        .summary-card.production {{ --card-color: #10b981; }}
+        .summary-card.production {{ --card-color: #dc2626; }}
         .summary-card.sample {{ --card-color: #f59e0b; }}
-        .summary-card.total {{ --card-color: #0ea5e9; }}
-        .summary-card.parts {{ --card-color: #8b5cf6; }}
+        .summary-card.total {{ --card-color: #059669; }}
+        .summary-card.parts {{ --card-color: #ea580c; }}
 
         .content-section {{
             padding: 30px;
@@ -367,17 +399,25 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
         .section-title {{
             font-size: 1.8rem;
             margin-bottom: 20px;
-            color: #0ea5e9;
-            border-bottom: 2px solid #0ea5e9;
+            color: #dc2626;
+            border-bottom: 2px solid #dc2626;
             padding-bottom: 10px;
         }}
 
         .chart-container {{
-            background: rgba(255, 255, 255, 0.05);
-            padding: 30px;
+            background: linear-gradient(135deg, #2d1b1b 0%, #1a1a1a 100%);
+            padding: 25px;
             border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            border: 1px solid rgba(220, 38, 38, 0.3);
             margin-bottom: 30px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }}
+
+        .chart-container h3 {{
+            color: #ffffff;
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+            text-align: center;
         }}
 
         .chart-wrapper {{
@@ -397,7 +437,7 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
             padding: 15px;
             font-size: 1rem;
             border-radius: 10px;
-            border: 2px solid #0ea5e9;
+            border: 2px solid #dc2626;
             background: rgba(255, 255, 255, 0.1);
             color: white;
             margin-bottom: 20px;
@@ -417,7 +457,7 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
         }}
 
         .machine-details h3 {{
-            color: #0ea5e9;
+            color: #dc2626;
             margin-bottom: 15px;
             font-size: 1.4rem;
         }}
@@ -433,7 +473,7 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
             background: rgba(14, 165, 233, 0.1);
             padding: 15px;
             border-radius: 10px;
-            border-left: 4px solid #0ea5e9;
+            border-left: 4px solid #dc2626;
         }}
 
         .detail-item .label {{
@@ -445,7 +485,7 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
         .detail-item .value {{
             font-size: 1.5rem;
             font-weight: bold;
-            color: #0ea5e9;
+            color: #dc2626;
         }}
 
         .records-table {{
@@ -459,7 +499,7 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
             padding: 12px;
             text-align: left;
             font-weight: 600;
-            border-bottom: 2px solid #0ea5e9;
+            border-bottom: 2px solid #dc2626;
         }}
 
         .records-table td {{
@@ -481,7 +521,7 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
         }}
 
         .production-badge {{
-            background: #10b981;
+            background: #059669;
             color: white;
             padding: 4px 8px;
             border-radius: 5px;
@@ -501,7 +541,7 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
             min-width: 200px;
             padding: 12px;
             border-radius: 10px;
-            border: 2px solid #0ea5e9;
+            border: 2px solid #dc2626;
             background: rgba(255, 255, 255, 0.1);
             color: white;
             font-size: 1rem;
@@ -540,12 +580,12 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
             <div class="summary-card production">
                 <h3>Production Hours</h3>
                 <div class="value">{total_production_hours:.2f}h</div>
-                <div class="label">Excluding samples (480s cycle)</div>
+                <div class="label">Excluding samples (480 min cycle)</div>
             </div>
             <div class="summary-card sample">
                 <h3>Sample Hours</h3>
                 <div class="value">{total_sample_hours:.2f}h</div>
-                <div class="label">480s cycle time only</div>
+                <div class="label">480 min cycle time only</div>
             </div>
             <div class="summary-card total">
                 <h3>Total Hours</h3>
@@ -599,7 +639,7 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
                         <td>{stats['total_hours']:.2f}h</td>
                         <td>{stats['total_parts']:,}</td>
                         <td>{len(stats['machines'])}</td>
-                        <td>{', '.join(f"{ct}s" for ct in sorted(stats['cycle_times']))}</td>
+                        <td>{', '.join(f"{ct/60:.1f} min" for ct in sorted(stats['cycle_times']))}</td>
                         <td>{'<span class="sample-badge">SAMPLE</span>' if stats['is_sample'] else '<span class="production-badge">PRODUCTION</span>'}</td>
                     </tr>''' for item, stats in sorted_items)}
                 </tbody>
@@ -607,8 +647,8 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
         </div>
 
         <div class="footer">
-            <p>⚠️ Note: Sample parts (cycle time = 480s) are tracked separately and excluded from production hours</p>
-            <p>Running Time Formula: (OK Parts × Cycle Time) / 3600 = Hours</p>
+            <p>⚠️ Note: Sample parts (cycle time = 480 minutes / 8 hours) are tracked separately and excluded from production hours</p>
+            <p>Running Time Formula: (OK Parts × Cycle Time in minutes × 60) / 3600 = Hours</p>
         </div>
     </div>
 
@@ -654,7 +694,7 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
                         borderWidth: 2
                     }},
                     {{
-                        label: 'Sample Hours (480s cycle)',
+                        label: 'Sample Hours (480 min cycle)',
                         data: {json.dumps(sample_hours)},
                         backgroundColor: 'rgba(245, 158, 11, 0.8)',
                         borderColor: 'rgba(245, 158, 11, 1)',
@@ -858,7 +898,7 @@ def generate_report(machine_stats, output_file=None):
     report_lines.append("-" * 100)
     report_lines.append(f"Total Machines: {total_machines}")
     report_lines.append(f"Total Production Hours (excluding samples): {total_production_hours:.2f} hours")
-    report_lines.append(f"Total Sample Hours (cycle time = 480s): {total_sample_hours:.2f} hours")
+    report_lines.append(f"Total Sample Hours (cycle time = 480 min): {total_sample_hours:.2f} hours")
     report_lines.append(f"Total All Hours (including samples): {total_all_hours:.2f} hours")
     report_lines.append("")
 
@@ -877,7 +917,7 @@ def generate_report(machine_stats, output_file=None):
     for machine, stats in sorted_machines:
         report_lines.append(f"Machine: {machine}")
         report_lines.append(f"  Production Hours (excl. samples): {stats['total_hours']:.2f} hours")
-        report_lines.append(f"  Sample Hours (480s cycle time):   {stats['sample_hours']:.2f} hours")
+        report_lines.append(f"  Sample Hours (480 min cycle time):  {stats['sample_hours']:.2f} hours")
         report_lines.append(f"  Total Hours (incl. samples):      {stats['total_hours_with_samples']:.2f} hours")
         report_lines.append(f"  Production Parts:                 {stats['total_parts']:,}")
         report_lines.append(f"  Sample Parts:                     {stats['sample_parts']:,}")
@@ -924,7 +964,8 @@ def generate_report(machine_stats, output_file=None):
     sorted_items = sorted(item_stats.items(), key=lambda x: x[1]['total_hours'], reverse=True)
 
     for item, stats in sorted_items:
-        cycle_times_str = ', '.join(f"{ct}s" for ct in sorted(stats['cycle_times']))
+        # Convert cycle times from seconds back to minutes for display
+        cycle_times_str = ', '.join(f"{ct/60:.1f} min" for ct in sorted(stats['cycle_times']))
         sample_flag = " [SAMPLE]" if stats['is_sample'] else ""
         report_lines.append(f"Item: {item}{sample_flag}")
         report_lines.append(f"  Production Hours: {stats['total_hours']:.2f} hours")
@@ -935,7 +976,7 @@ def generate_report(machine_stats, output_file=None):
 
     # Footer
     report_lines.append("=" * 100)
-    report_lines.append("NOTE: Sample parts (cycle time = 480s) are tracked separately and excluded from production hours")
+    report_lines.append("NOTE: Sample parts (cycle time = 480 minutes / 8 hours) are tracked separately and excluded from production hours")
     report_lines.append("=" * 100)
 
     report_text = '\n'.join(report_lines)
@@ -950,6 +991,24 @@ def generate_report(machine_stats, output_file=None):
         print(f"\n✅ Report saved to: {output_file}")
 
     return report_text
+
+
+def select_folder_dialog(title="Select Folder", prompt_text="Enter folder path: "):
+    """Show GUI dialog to select a folder, or fall back to text input"""
+    if TKINTER_AVAILABLE:
+        try:
+            root = tk.Tk()
+            root.withdraw()  # Hide the main window
+            root.attributes('-topmost', True)  # Bring dialog to front
+            folder_path = filedialog.askdirectory(title=title)
+            root.destroy()
+            return folder_path
+        except Exception as e:
+            print(f"⚠️  GUI dialog failed: {e}")
+            print("   Falling back to text input...")
+
+    # Fallback to text input
+    return input(prompt_text).strip()
 
 
 def get_available_months(records):
@@ -989,13 +1048,19 @@ def main():
     print("=" * 70)
     print()
 
-    # Get input folder path from command line or prompt
+    # Get input folder path from command line or GUI dialog
     if len(sys.argv) > 1:
         folder_path = sys.argv[1]
     else:
-        print("📂 INPUT FOLDER")
-        print("-" * 70)
-        folder_path = input("Enter the folder path containing HTML report files: ").strip()
+        print("📂 INPUT FOLDER - Please select the folder containing HTML report files...")
+        folder_path = select_folder_dialog(
+            title="Select INPUT Folder (HTML Reports)",
+            prompt_text="Enter the folder path containing HTML reports: "
+        )
+
+        if not folder_path:
+            print("❌ No folder selected. Exiting...")
+            return
 
     if not os.path.exists(folder_path):
         print(f"❌ Error: Folder not found: {folder_path}")
@@ -1061,15 +1126,19 @@ def main():
     # Calculate running hours
     machine_stats = calculate_running_hours(all_records, exclude_samples=True)
 
-    # Get output folder path
+    # Get output folder path from command line or GUI dialog
     print()
-    print("💾 OUTPUT FOLDER")
-    print("-" * 70)
     if len(sys.argv) > 2:
         output_folder = sys.argv[2]
     else:
-        output_folder = input("Enter the folder path to save reports (press Enter for current directory): ").strip()
+        print("💾 OUTPUT FOLDER - Please select where to save the reports...")
+        output_folder = select_folder_dialog(
+            title="Select OUTPUT Folder (Save Reports)",
+            prompt_text="Enter the output folder path (or press Enter for current directory): "
+        )
+
         if not output_folder:
+            print("⚠️  No output folder selected, using current directory...")
             output_folder = "."
 
     # Create output folder if it doesn't exist
