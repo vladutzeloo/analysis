@@ -596,12 +596,27 @@ def generate_html_report(machine_stats, all_records, output_file, available_mont
         <div class="header">
             <h1>⚙️ CNC Machine Running Time Analysis - Power BI Dashboard</h1>
             <p class="subtitle">Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | Date Range: {date_range}</p>
-            <div style="margin-top: 15px;">
-                <label style="color: white; font-weight: 500; margin-right: 10px;">📅 Filter by Date:</label>
-                <select id="dateFilter" style="padding: 8px 15px; border-radius: 8px; border: 2px solid #dc2626; background: rgba(255,255,255,0.1); color: white; font-size: 1rem; cursor: pointer;">
-                    <option value="all">All Dates</option>
-                    {"".join(f'<option value="{month}">{month}</option>' for month in available_months)}
-                </select>
+            <div style="margin-top: 15px; display: flex; gap: 20px; justify-content: center; align-items: center; flex-wrap: wrap;">
+                <div>
+                    <label style="color: white; font-weight: 500; margin-right: 10px;">📅 Filter by:</label>
+                    <select id="filterType" style="padding: 8px 15px; border-radius: 8px; border: 2px solid #dc2626; background: rgba(255,255,255,0.1); color: white; font-size: 1rem; cursor: pointer;">
+                        <option value="all">All Data</option>
+                        <option value="month">By Month</option>
+                        <option value="week">By Week</option>
+                    </select>
+                </div>
+                <div id="monthFilterContainer" style="display: none;">
+                    <label style="color: white; font-weight: 500; margin-right: 10px;">Month:</label>
+                    <select id="monthFilter" style="padding: 8px 15px; border-radius: 8px; border: 2px solid #dc2626; background: rgba(255,255,255,0.1); color: white; font-size: 1rem; cursor: pointer;">
+                        {"".join(f'<option value="{month}">{month}</option>' for month in available_months)}
+                    </select>
+                </div>
+                <div id="weekFilterContainer" style="display: none;">
+                    <label style="color: white; font-weight: 500; margin-right: 10px;">Week:</label>
+                    <select id="weekFilter" style="padding: 8px 15px; border-radius: 8px; border: 2px solid #dc2626; background: rgba(255,255,255,0.1); color: white; font-size: 1rem; cursor: pointer;">
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
             </div>
         </div>
 
@@ -657,10 +672,10 @@ def generate_html_report(machine_stats, all_records, output_file, available_mont
         </div>
 
         <div class="content-section">
-            <h2 class="section-title">🏭 Parts Production by Machine</h2>
+            <h2 class="section-title">⚡ Working Time vs Downtime by Machine</h2>
             <div class="chart-container">
                 <div class="chart-wrapper">
-                    <canvas id="partsChart"></canvas>
+                    <canvas id="downtimeChart"></canvas>
                 </div>
             </div>
         </div>
@@ -714,7 +729,7 @@ def generate_html_report(machine_stats, all_records, output_file, available_mont
 
         // Chart: Machine Hours Comparison
         const ctx = document.getElementById('machineHoursChart').getContext('2d');
-        new Chart(ctx, {{
+        machineHoursChartInstance = new Chart(ctx, {{
             type: 'bar',
             data: {{
                 labels: {json.dumps(machine_names)},
@@ -899,24 +914,24 @@ def generate_html_report(machine_stats, all_records, output_file, available_mont
             container.innerHTML = html;
         }});
 
-        // Chart: Parts Production by Machine
-        const partsCtx = document.getElementById('partsChart').getContext('2d');
-        const machinePartsData = Object.entries(machineData).sort((a, b) => b[1].production_parts - a[1].production_parts);
-        new Chart(partsCtx, {{
+        // Chart: Working Time vs Downtime by Machine
+        const downtimeCtx = document.getElementById('downtimeChart').getContext('2d');
+        const machineDowntimeData = Object.entries(machineData).sort((a, b) => b[1].total_hours - a[1].total_hours);
+        downtimeChartInstance = new Chart(downtimeCtx, {{
             type: 'bar',
             data: {{
-                labels: machinePartsData.map(([name, _]) => name),
+                labels: machineDowntimeData.map(([name, _]) => name),
                 datasets: [
                     {{
-                        label: 'Production Parts',
-                        data: machinePartsData.map(([_, data]) => data.production_parts),
-                        backgroundColor: 'rgba(220, 38, 38, 0.8)',
-                        borderColor: 'rgba(220, 38, 38, 1)',
+                        label: 'Working Time',
+                        data: machineDowntimeData.map(([_, data]) => data.total_hours),
+                        backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                        borderColor: 'rgba(16, 185, 129, 1)',
                         borderWidth: 2
                     }},
                     {{
-                        label: 'Sample Parts',
-                        data: machinePartsData.map(([_, data]) => data.sample_parts),
+                        label: 'Downtime',
+                        data: machineDowntimeData.map(([_, data]) => data.downtime_hours),
                         backgroundColor: 'rgba(245, 158, 11, 0.8)',
                         borderColor: 'rgba(245, 158, 11, 1)',
                         borderWidth: 2
@@ -933,13 +948,28 @@ def generate_html_report(machine_stats, all_records, output_file, available_mont
                     }},
                     title: {{
                         display: true,
-                        text: 'Parts Produced per Machine',
+                        text: 'Working Hours vs Downtime per Machine',
                         color: 'white',
                         font: {{ size: 16 }}
+                    }},
+                    tooltip: {{
+                        callbacks: {{
+                            afterBody: function(context) {{
+                                const index = context[0].dataIndex;
+                                const [machineName, data] = machineDowntimeData[index];
+                                return [
+                                    '',
+                                    'Available Capacity: ' + data.available_capacity.toFixed(1) + 'h',
+                                    'Availability: ' + data.availability_percent.toFixed(1) + '%',
+                                    'Downtime: ' + data.downtime_percent.toFixed(1) + '%'
+                                ];
+                            }}
+                        }}
                     }}
                 }},
                 scales: {{
                     x: {{
+                        stacked: true,
                         ticks: {{
                             color: 'white',
                             maxRotation: 45,
@@ -951,12 +981,12 @@ def generate_html_report(machine_stats, all_records, output_file, available_mont
                         stacked: true,
                         ticks: {{
                             color: 'white',
-                            callback: function(value) {{ return value.toLocaleString(); }}
+                            callback: function(value) {{ return value.toFixed(1) + 'h'; }}
                         }},
                         grid: {{ color: 'rgba(255, 255, 255, 0.1)' }},
                         title: {{
                             display: true,
-                            text: 'Parts Count',
+                            text: 'Hours',
                             color: 'white',
                             font: {{ size: 14 }}
                         }}
@@ -965,9 +995,200 @@ def generate_html_report(machine_stats, all_records, output_file, available_mont
             }}
         }});
 
+        // Week/Month Filtering Functionality
+        function getWeekNumber(dateStr) {{
+            const date = new Date(dateStr);
+            const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+            const pastDaysOfYear = (date - firstDayOfYear) / 86400000;
+            return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+        }}
+
+        function getWeekLabel(dateStr) {{
+            const date = new Date(dateStr);
+            const year = date.getFullYear();
+            const week = getWeekNumber(dateStr);
+            return `${{year}}-W${{String(week).padStart(2, '0')}}`;
+        }}
+
+        // Populate week filter with available weeks
+        function populateWeekFilter() {{
+            const weeks = new Set();
+            Object.values(machineData).forEach(machine => {{
+                machine.dates.forEach(date => {{
+                    weeks.add(getWeekLabel(date));
+                }});
+            }});
+
+            const weekFilter = document.getElementById('weekFilter');
+            weekFilter.innerHTML = '';
+            Array.from(weeks).sort().forEach(week => {{
+                const option = document.createElement('option');
+                option.value = week;
+                option.textContent = week;
+                weekFilter.appendChild(option);
+            }});
+        }}
+
+        populateWeekFilter();
+
+        // Filter type change handler
+        document.getElementById('filterType').addEventListener('change', function() {{
+            const filterType = this.value;
+            document.getElementById('monthFilterContainer').style.display = filterType === 'month' ? 'block' : 'none';
+            document.getElementById('weekFilterContainer').style.display = filterType === 'week' ? 'block' : 'none';
+
+            if (filterType === 'all') {{
+                applyFilter('all', null);
+            }} else if (filterType === 'month') {{
+                applyFilter('month', document.getElementById('monthFilter').value);
+            }} else if (filterType === 'week') {{
+                applyFilter('week', document.getElementById('weekFilter').value);
+            }}
+        }});
+
+        // Month filter change handler
+        document.getElementById('monthFilter').addEventListener('change', function() {{
+            applyFilter('month', this.value);
+        }});
+
+        // Week filter change handler
+        document.getElementById('weekFilter').addEventListener('change', function() {{
+            applyFilter('week', this.value);
+        }});
+
+        // Apply filter to data
+        function applyFilter(filterType, filterValue) {{
+            console.log('Applying filter:', filterType, filterValue);
+
+            // Filter machine data based on selection
+            let filteredData = {{}};
+
+            Object.entries(machineData).forEach(([machineName, data]) => {{
+                let filteredRecords = data.records;
+
+                if (filterType === 'month' && filterValue) {{
+                    filteredRecords = data.records.filter(r => r.date.startsWith(filterValue));
+                }} else if (filterType === 'week' && filterValue) {{
+                    filteredRecords = data.records.filter(r => getWeekLabel(r.date) === filterValue);
+                }}
+
+                if (filteredRecords.length > 0) {{
+                    // Recalculate statistics for filtered records
+                    let totalSeconds = 0;
+                    let sampleSeconds = 0;
+                    let totalParts = 0;
+                    let sampleParts = 0;
+                    let hasSamples = false;
+                    let shiftCounts = {{}};
+
+                    filteredRecords.forEach(record => {{
+                        // Count shifts
+                        shiftCounts[record.shift] = (shiftCounts[record.shift] || 0) + 1;
+
+                        if (record.is_sample) {{
+                            if (!hasSamples) {{
+                                sampleSeconds = 28800; // 8 hours
+                                hasSamples = true;
+                            }}
+                            sampleParts += record.ok_parts;
+                        }} else {{
+                            totalSeconds += record.ok_parts * record.cycle_time;
+                            totalParts += record.ok_parts;
+                        }}
+                    }});
+
+                    const totalHours = totalSeconds / 3600;
+                    const sampleHours = sampleSeconds / 3600;
+                    const totalHoursWithSamples = totalHours + sampleHours;
+
+                    const totalShiftOccurrences = Object.values(shiftCounts).reduce((a, b) => a + b, 0);
+                    const availableCapacity = totalShiftOccurrences * 8;
+                    const downtimeHours = Math.max(0, availableCapacity - totalHoursWithSamples);
+                    const availabilityPercent = availableCapacity > 0 ? (totalHoursWithSamples / availableCapacity * 100) : 0;
+                    const downtimePercent = 100 - availabilityPercent;
+
+                    filteredData[machineName] = {{
+                        total_hours: totalHours,
+                        sample_hours: sampleHours,
+                        total_hours_with_samples: totalHoursWithSamples,
+                        production_parts: totalParts,
+                        sample_parts: sampleParts,
+                        available_capacity: availableCapacity,
+                        downtime_hours: downtimeHours,
+                        availability_percent: availabilityPercent,
+                        downtime_percent: downtimePercent
+                    }};
+                }}
+            }});
+
+            // Update summary cards
+            updateSummaryCards(filteredData);
+
+            // Update charts
+            updateCharts(filteredData);
+        }}
+
+        // Update summary cards with filtered data
+        function updateSummaryCards(filteredData) {{
+            const totalProductionHours = Object.values(filteredData).reduce((sum, d) => sum + d.total_hours, 0);
+            const totalSampleHours = Object.values(filteredData).reduce((sum, d) => sum + d.sample_hours, 0);
+            const totalAllHours = Object.values(filteredData).reduce((sum, d) => sum + d.total_hours_with_samples, 0);
+            const totalDowntimeHours = Object.values(filteredData).reduce((sum, d) => sum + d.downtime_hours, 0);
+            const totalAvailableHours = Object.values(filteredData).reduce((sum, d) => sum + d.available_capacity, 0);
+            const overallAvailability = totalAvailableHours > 0 ? (totalAllHours / totalAvailableHours * 100) : 0;
+            const overallDowntimePercent = 100 - overallAvailability;
+            const totalMachines = Object.keys(filteredData).length;
+            const totalProductionParts = Object.values(filteredData).reduce((sum, d) => sum + d.production_parts, 0);
+
+            // Update card values
+            document.querySelector('.summary-card.production .value').textContent = totalProductionHours.toFixed(2) + 'h';
+            document.querySelector('.summary-card.sample .value').textContent = totalSampleHours.toFixed(2) + 'h';
+            document.querySelector('.summary-card.total .value').textContent = totalAllHours.toFixed(2) + 'h';
+            document.querySelector('.summary-card.parts .value').textContent = totalMachines;
+            document.querySelector('.summary-card.parts .label').textContent = totalProductionParts.toLocaleString() + ' production parts';
+
+            const downtimeCard = Array.from(document.querySelectorAll('.summary-card')).find(c => c.innerHTML.includes('Downtime'));
+            if (downtimeCard) {{
+                downtimeCard.querySelector('.value').textContent = totalDowntimeHours.toFixed(1) + 'h';
+                downtimeCard.querySelector('.label').textContent = overallDowntimePercent.toFixed(1) + '% of capacity';
+            }}
+
+            const availabilityCard = Array.from(document.querySelectorAll('.summary-card')).find(c => c.innerHTML.includes('Availability'));
+            if (availabilityCard) {{
+                availabilityCard.querySelector('.value').textContent = overallAvailability.toFixed(1) + '%';
+                availabilityCard.querySelector('.label').textContent = totalAllHours.toFixed(1) + 'h / ' + totalAvailableHours.toFixed(1) + 'h capacity';
+            }}
+        }}
+
+        // Store chart instances for updating
+        let machineHoursChartInstance, downtimeChartInstance, comparisonChartInstance;
+
+        // Update charts with filtered data
+        function updateCharts(filteredData) {{
+            const sortedByHours = Object.entries(filteredData).sort((a, b) => b[1].total_hours - a[1].total_hours);
+
+            // Update machine hours chart
+            machineHoursChartInstance.data.labels = sortedByHours.map(([name, _]) => name);
+            machineHoursChartInstance.data.datasets[0].data = sortedByHours.map(([_, d]) => d.total_hours);
+            machineHoursChartInstance.data.datasets[1].data = sortedByHours.map(([_, d]) => d.sample_hours);
+            machineHoursChartInstance.update();
+
+            // Update downtime chart
+            downtimeChartInstance.data.labels = sortedByHours.map(([name, _]) => name);
+            downtimeChartInstance.data.datasets[0].data = sortedByHours.map(([_, d]) => d.total_hours_with_samples);
+            downtimeChartInstance.data.datasets[1].data = sortedByHours.map(([_, d]) => d.downtime_hours);
+            downtimeChartInstance.update();
+
+            // Update comparison chart
+            const totalProductionHours = Object.values(filteredData).reduce((sum, d) => sum + d.total_hours, 0);
+            const totalSampleHours = Object.values(filteredData).reduce((sum, d) => sum + d.sample_hours, 0);
+            comparisonChartInstance.data.datasets[0].data = [totalProductionHours, totalSampleHours];
+            comparisonChartInstance.update();
+        }}
+
         // Chart: Production vs Sample Hours Comparison
         const comparisonCtx = document.getElementById('hoursComparisonChart').getContext('2d');
-        new Chart(comparisonCtx, {{
+        comparisonChartInstance = new Chart(comparisonCtx, {{
             type: 'doughnut',
             data: {{
                 labels: ['Production Hours', 'Sample Hours (480 min once per machine)'],
