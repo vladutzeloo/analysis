@@ -257,6 +257,12 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
     total_production_parts = sum(stats['total_parts'] for stats in machine_stats.values())
     total_sample_parts = sum(stats['sample_parts'] for stats in machine_stats.values())
 
+    # Downtime statistics
+    total_downtime_hours = sum(stats['downtime_hours'] for stats in machine_stats.values())
+    total_available_hours = sum(stats['available_capacity'] for stats in machine_stats.values())
+    overall_availability = (total_all_hours / total_available_hours * 100) if total_available_hours > 0 else 0
+    overall_downtime_percent = 100 - overall_availability
+
     # Get all unique dates
     all_dates = set()
     for stats in machine_stats.values():
@@ -612,6 +618,16 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
                 <h3>Total Machines</h3>
                 <div class="value">{total_machines}</div>
                 <div class="label">{total_production_parts:,} production parts</div>
+            </div>
+            <div class="summary-card" style="--card-color: #f59e0b;">
+                <h3>⏱️ Downtime</h3>
+                <div class="value">{total_downtime_hours:.1f}h</div>
+                <div class="label">{overall_downtime_percent:.1f}% of capacity</div>
+            </div>
+            <div class="summary-card" style="--card-color: #10b981;">
+                <h3>✅ Availability</h3>
+                <div class="value">{overall_availability:.1f}%</div>
+                <div class="label">{total_all_hours:.1f}h / {total_available_hours:.1f}h capacity</div>
             </div>
         </div>
 
