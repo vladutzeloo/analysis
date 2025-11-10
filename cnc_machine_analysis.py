@@ -14,6 +14,14 @@ from html.parser import HTMLParser
 from collections import defaultdict
 import json
 
+# Try to import tkinter for GUI dialogs, but make it optional
+try:
+    import tkinter as tk
+    from tkinter import filedialog
+    TKINTER_AVAILABLE = True
+except ImportError:
+    TKINTER_AVAILABLE = False
+
 
 class ProductionHTMLParser(HTMLParser):
     """Custom HTML parser to extract production data from dashboard tables"""
@@ -281,7 +289,7 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
 
         body {{
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d1b1b 100%);
             min-height: 100vh;
             padding: 20px;
             color: #ffffff;
@@ -290,75 +298,94 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
         .container {{
             max-width: 1600px;
             margin: 0 auto;
-            background: linear-gradient(135deg, #0f3460 0%, #16213e 100%);
+            background: linear-gradient(135deg, #2d1b1b 0%, #1a1a1a 100%);
             border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(14, 165, 233, 0.3);
+            box-shadow: 0 20px 40px rgba(220, 38, 38, 0.3);
             overflow: hidden;
-            border: 1px solid rgba(14, 165, 233, 0.3);
+            border: 1px solid rgba(220, 38, 38, 0.3);
         }}
 
         .header {{
-            background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
             color: white;
-            padding: 40px;
+            padding: 30px;
             text-align: center;
+            position: relative;
         }}
 
         .header h1 {{
             font-size: 2.5rem;
-            margin-bottom: 10px;
+            margin: 0;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }}
 
         .header .subtitle {{
-            font-size: 1.1rem;
-            opacity: 0.95;
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin-top: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 16px;
+            border-radius: 6px;
+            display: inline-block;
         }}
 
         .summary-cards {{
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
             padding: 30px;
-            background: rgba(15, 52, 96, 0.5);
+            background: rgba(45, 27, 27, 0.5);
         }}
 
         .summary-card {{
-            background: linear-gradient(135deg, var(--card-color, #0ea5e9) 0%, rgba(2, 132, 199, 0.8) 100%);
+            background: linear-gradient(135deg, #2d1b1b 0%, #1a1a1a 100%);
             padding: 25px;
             border-radius: 15px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            text-align: center;
+            position: relative;
+            border: 1px solid rgba(220, 38, 38, 0.3);
+            transition: transform 0.3s ease;
+        }}
+
+        .summary-card::before {{
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--card-color);
         }}
 
         .summary-card:hover {{
             transform: translateY(-5px);
-            box-shadow: 0 12px 24px rgba(14, 165, 233, 0.4);
         }}
 
         .summary-card h3 {{
+            color: rgba(255, 255, 255, 0.7);
             font-size: 0.9rem;
-            margin-bottom: 10px;
-            opacity: 0.9;
+            font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            margin-bottom: 10px;
         }}
 
         .summary-card .value {{
             font-size: 2.5rem;
-            font-weight: bold;
+            font-weight: 700;
+            color: var(--card-color);
             margin-bottom: 5px;
         }}
 
         .summary-card .label {{
-            font-size: 0.85rem;
-            opacity: 0.85;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.9rem;
         }}
 
-        .summary-card.production {{ --card-color: #10b981; }}
+        .summary-card.production {{ --card-color: #dc2626; }}
         .summary-card.sample {{ --card-color: #f59e0b; }}
-        .summary-card.total {{ --card-color: #0ea5e9; }}
-        .summary-card.parts {{ --card-color: #8b5cf6; }}
+        .summary-card.total {{ --card-color: #059669; }}
+        .summary-card.parts {{ --card-color: #ea580c; }}
 
         .content-section {{
             padding: 30px;
@@ -367,17 +394,25 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
         .section-title {{
             font-size: 1.8rem;
             margin-bottom: 20px;
-            color: #0ea5e9;
-            border-bottom: 2px solid #0ea5e9;
+            color: #dc2626;
+            border-bottom: 2px solid #dc2626;
             padding-bottom: 10px;
         }}
 
         .chart-container {{
-            background: rgba(255, 255, 255, 0.05);
-            padding: 30px;
+            background: linear-gradient(135deg, #2d1b1b 0%, #1a1a1a 100%);
+            padding: 25px;
             border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            border: 1px solid rgba(220, 38, 38, 0.3);
             margin-bottom: 30px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }}
+
+        .chart-container h3 {{
+            color: #ffffff;
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+            text-align: center;
         }}
 
         .chart-wrapper {{
@@ -397,7 +432,7 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
             padding: 15px;
             font-size: 1rem;
             border-radius: 10px;
-            border: 2px solid #0ea5e9;
+            border: 2px solid #dc2626;
             background: rgba(255, 255, 255, 0.1);
             color: white;
             margin-bottom: 20px;
@@ -417,7 +452,7 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
         }}
 
         .machine-details h3 {{
-            color: #0ea5e9;
+            color: #dc2626;
             margin-bottom: 15px;
             font-size: 1.4rem;
         }}
@@ -433,7 +468,7 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
             background: rgba(14, 165, 233, 0.1);
             padding: 15px;
             border-radius: 10px;
-            border-left: 4px solid #0ea5e9;
+            border-left: 4px solid #dc2626;
         }}
 
         .detail-item .label {{
@@ -445,7 +480,7 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
         .detail-item .value {{
             font-size: 1.5rem;
             font-weight: bold;
-            color: #0ea5e9;
+            color: #dc2626;
         }}
 
         .records-table {{
@@ -459,7 +494,7 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
             padding: 12px;
             text-align: left;
             font-weight: 600;
-            border-bottom: 2px solid #0ea5e9;
+            border-bottom: 2px solid #dc2626;
         }}
 
         .records-table td {{
@@ -481,7 +516,7 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
         }}
 
         .production-badge {{
-            background: #10b981;
+            background: #059669;
             color: white;
             padding: 4px 8px;
             border-radius: 5px;
@@ -501,7 +536,7 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
             min-width: 200px;
             padding: 12px;
             border-radius: 10px;
-            border: 2px solid #0ea5e9;
+            border: 2px solid #dc2626;
             background: rgba(255, 255, 255, 0.1);
             color: white;
             font-size: 1rem;
@@ -952,6 +987,24 @@ def generate_report(machine_stats, output_file=None):
     return report_text
 
 
+def select_folder_dialog(title="Select Folder", prompt_text="Enter folder path: "):
+    """Show GUI dialog to select a folder, or fall back to text input"""
+    if TKINTER_AVAILABLE:
+        try:
+            root = tk.Tk()
+            root.withdraw()  # Hide the main window
+            root.attributes('-topmost', True)  # Bring dialog to front
+            folder_path = filedialog.askdirectory(title=title)
+            root.destroy()
+            return folder_path
+        except Exception as e:
+            print(f"⚠️  GUI dialog failed: {e}")
+            print("   Falling back to text input...")
+
+    # Fallback to text input
+    return input(prompt_text).strip()
+
+
 def get_available_months(records):
     """Extract unique months from records"""
     months = set()
@@ -989,13 +1042,19 @@ def main():
     print("=" * 70)
     print()
 
-    # Get input folder path from command line or prompt
+    # Get input folder path from command line or GUI dialog
     if len(sys.argv) > 1:
         folder_path = sys.argv[1]
     else:
-        print("📂 INPUT FOLDER")
-        print("-" * 70)
-        folder_path = input("Enter the folder path containing HTML report files: ").strip()
+        print("📂 INPUT FOLDER - Please select the folder containing HTML report files...")
+        folder_path = select_folder_dialog(
+            title="Select INPUT Folder (HTML Reports)",
+            prompt_text="Enter the folder path containing HTML reports: "
+        )
+
+        if not folder_path:
+            print("❌ No folder selected. Exiting...")
+            return
 
     if not os.path.exists(folder_path):
         print(f"❌ Error: Folder not found: {folder_path}")
@@ -1061,15 +1120,19 @@ def main():
     # Calculate running hours
     machine_stats = calculate_running_hours(all_records, exclude_samples=True)
 
-    # Get output folder path
+    # Get output folder path from command line or GUI dialog
     print()
-    print("💾 OUTPUT FOLDER")
-    print("-" * 70)
     if len(sys.argv) > 2:
         output_folder = sys.argv[2]
     else:
-        output_folder = input("Enter the folder path to save reports (press Enter for current directory): ").strip()
+        print("💾 OUTPUT FOLDER - Please select where to save the reports...")
+        output_folder = select_folder_dialog(
+            title="Select OUTPUT Folder (Save Reports)",
+            prompt_text="Enter the output folder path (or press Enter for current directory): "
+        )
+
         if not output_folder:
+            print("⚠️  No output folder selected, using current directory...")
             output_folder = "."
 
     # Create output folder if it doesn't exist
