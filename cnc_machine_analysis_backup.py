@@ -188,8 +188,7 @@ def calculate_running_hours(records, exclude_samples=True):
         'records': [],
         'dates': set(),
         'items': set(),
-        'shifts': set(),
-        'shift_counts': defaultdict(int)  # Track how many times each shift appears
+        'shifts': set()
     })
 
     for record in records:
@@ -197,10 +196,6 @@ def calculate_running_hours(records, exclude_samples=True):
         ok_parts = record['ok_parts']
         cycle_time = record['cycle_time']
         is_sample = record['is_sample']
-        shift = record['shift']
-
-        # Track shift occurrences for downtime calculation
-        machine_stats[machine]['shift_counts'][shift] += 1
 
         # Calculate running time in seconds
         # For sample parts (480 min), just count 480 minutes ONCE, not per part
@@ -223,21 +218,11 @@ def calculate_running_hours(records, exclude_samples=True):
         machine_stats[machine]['shifts'].add(record['shift'])
         machine_stats[machine]['records'].append(record)
 
-    # Convert seconds to hours and calculate downtime
+    # Convert seconds to hours
     for machine, stats in machine_stats.items():
         stats['total_hours'] = stats['total_seconds'] / 3600
         stats['sample_hours'] = stats['sample_seconds'] / 3600
         stats['total_hours_with_samples'] = (stats['total_seconds'] + stats['sample_seconds']) / 3600
-
-        # Calculate downtime: Available capacity - actual running time
-        # Each shift = 8 hours available
-        total_shift_occurrences = sum(stats['shift_counts'].values())
-        available_hours = total_shift_occurrences * 8  # 8 hours per shift
-        stats['available_capacity'] = available_hours
-        stats['downtime_hours'] = max(0, available_hours - stats['total_hours_with_samples'])
-        stats['availability_percent'] = (stats['total_hours_with_samples'] / available_hours * 100) if available_hours > 0 else 0
-        stats['downtime_percent'] = 100 - stats['availability_percent']
-
         stats['dates'] = sorted(list(stats['dates']))
         stats['items'] = sorted(list(stats['items']))
         stats['shifts'] = sorted(list(stats['shifts']))
@@ -256,12 +241,6 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
     total_all_hours = sum(stats['total_hours_with_samples'] for stats in machine_stats.values())
     total_production_parts = sum(stats['total_parts'] for stats in machine_stats.values())
     total_sample_parts = sum(stats['sample_parts'] for stats in machine_stats.values())
-
-    # Downtime statistics
-    total_downtime_hours = sum(stats['downtime_hours'] for stats in machine_stats.values())
-    total_available_hours = sum(stats['available_capacity'] for stats in machine_stats.values())
-    overall_availability = (total_all_hours / total_available_hours * 100) if total_available_hours > 0 else 0
-    overall_downtime_percent = 100 - overall_availability
 
     # Get all unique dates
     all_dates = set()
@@ -618,16 +597,6 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
                 <h3>Total Machines</h3>
                 <div class="value">{total_machines}</div>
                 <div class="label">{total_production_parts:,} production parts</div>
-            </div>
-            <div class="summary-card" style="--card-color: #f59e0b;">
-                <h3>⏱️ Downtime</h3>
-                <div class="value">{total_downtime_hours:.1f}h</div>
-                <div class="label">{overall_downtime_percent:.1f}% of capacity</div>
-            </div>
-            <div class="summary-card" style="--card-color: #10b981;">
-                <h3>✅ Availability</h3>
-                <div class="value">{overall_availability:.1f}%</div>
-                <div class="label">{total_all_hours:.1f}h / {total_available_hours:.1f}h capacity</div>
             </div>
         </div>
 
