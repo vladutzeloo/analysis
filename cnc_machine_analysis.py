@@ -989,15 +989,20 @@ def main():
     print("=" * 70)
     print()
 
-    # Get folder path from command line or prompt
+    # Get input folder path from command line or prompt
     if len(sys.argv) > 1:
         folder_path = sys.argv[1]
     else:
-        folder_path = input("Enter the folder path containing HTML files: ").strip()
+        print("📂 INPUT FOLDER")
+        print("-" * 70)
+        folder_path = input("Enter the folder path containing HTML report files: ").strip()
 
     if not os.path.exists(folder_path):
         print(f"❌ Error: Folder not found: {folder_path}")
         return
+
+    print(f"✅ Input folder: {folder_path}")
+    print()
 
     # Find all HTML files
     html_files = []
@@ -1056,6 +1061,28 @@ def main():
     # Calculate running hours
     machine_stats = calculate_running_hours(all_records, exclude_samples=True)
 
+    # Get output folder path
+    print()
+    print("💾 OUTPUT FOLDER")
+    print("-" * 70)
+    if len(sys.argv) > 2:
+        output_folder = sys.argv[2]
+    else:
+        output_folder = input("Enter the folder path to save reports (press Enter for current directory): ").strip()
+        if not output_folder:
+            output_folder = "."
+
+    # Create output folder if it doesn't exist
+    if output_folder != ".":
+        os.makedirs(output_folder, exist_ok=True)
+
+    if not os.path.exists(output_folder):
+        print(f"❌ Error: Could not create output folder: {output_folder}")
+        return
+
+    print(f"✅ Output folder: {os.path.abspath(output_folder)}")
+    print()
+
     # Generate reports
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
@@ -1066,15 +1093,15 @@ def main():
         month_display = ", ".join(selected_months)
 
     # Generate HTML report (main output)
-    html_file = f"cnc_running_hours_dashboard_{timestamp}.html"
+    html_file = os.path.join(output_folder, f"cnc_running_hours_dashboard_{timestamp}.html")
     generate_html_report(machine_stats, all_records, html_file, month_filter=month_display)
 
     # Generate text report (backup)
-    txt_file = f"cnc_running_hours_report_{timestamp}.txt"
+    txt_file = os.path.join(output_folder, f"cnc_running_hours_report_{timestamp}.txt")
     generate_report(machine_stats, txt_file)
 
     # Also save JSON data for further analysis
-    json_file = f"cnc_running_hours_data_{timestamp}.json"
+    json_file = os.path.join(output_folder, f"cnc_running_hours_data_{timestamp}.json")
 
     # Convert sets to lists for JSON serialization
     json_data = {}
