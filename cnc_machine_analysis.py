@@ -2,7 +2,8 @@
 """
 CNC Machine Running Time Analysis
 Extracts production data from HTML files and calculates actual running hours per machine
-Excludes sample parts (cycle time = 480s)
+Note: Cycle times in HTML are in MINUTES (e.g., "1.5s" = 1.5 minutes)
+Excludes sample parts (cycle time = 480 minutes = 8 hours)
 """
 
 import os
@@ -76,14 +77,18 @@ class ProductionHTMLParser(HTMLParser):
 def parse_cycle_time(cycle_time_str):
     """
     Parse cycle time string and convert to seconds
-    Examples: "1.5s" -> 1.5, "480.0s" -> 480.0, "—" -> None
+    Note: The values in HTML are in MINUTES, not seconds!
+    Examples: "1.5s" -> 1.5 minutes -> 90 seconds
+              "480.0s" -> 480 minutes -> 28,800 seconds (8 hours)
     """
     if not cycle_time_str or cycle_time_str.strip() in ['—', '-', 'N/A', '']:
         return None
 
     match = re.search(r'([\d.]+)\s*s', cycle_time_str)
     if match:
-        return float(match.group(1))
+        # The value is in MINUTES, convert to seconds
+        minutes = float(match.group(1))
+        return minutes * 60  # Convert minutes to seconds
     return None
 
 
@@ -151,7 +156,7 @@ def extract_production_data(html_file):
                     'cycle_time': cycle_time,
                     'operator': operator,
                     'shift': shift,
-                    'is_sample': cycle_time == 480.0  # Flag sample parts
+                    'is_sample': cycle_time == 28800.0  # Flag sample parts (480 minutes = 28,800 seconds)
                 })
 
         return records
@@ -167,7 +172,7 @@ def calculate_running_hours(records, exclude_samples=True):
 
     Args:
         records: List of production records
-        exclude_samples: If True, exclude records where cycle_time = 480s
+        exclude_samples: If True, exclude records where cycle_time = 480 minutes (28,800 seconds)
 
     Returns:
         Dictionary with machine statistics
@@ -575,12 +580,12 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
             <div class="summary-card production">
                 <h3>Production Hours</h3>
                 <div class="value">{total_production_hours:.2f}h</div>
-                <div class="label">Excluding samples (480s cycle)</div>
+                <div class="label">Excluding samples (480 min cycle)</div>
             </div>
             <div class="summary-card sample">
                 <h3>Sample Hours</h3>
                 <div class="value">{total_sample_hours:.2f}h</div>
-                <div class="label">480s cycle time only</div>
+                <div class="label">480 min cycle time only</div>
             </div>
             <div class="summary-card total">
                 <h3>Total Hours</h3>
@@ -634,7 +639,7 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
                         <td>{stats['total_hours']:.2f}h</td>
                         <td>{stats['total_parts']:,}</td>
                         <td>{len(stats['machines'])}</td>
-                        <td>{', '.join(f"{ct}s" for ct in sorted(stats['cycle_times']))}</td>
+                        <td>{', '.join(f"{ct/60:.1f} min" for ct in sorted(stats['cycle_times']))}</td>
                         <td>{'<span class="sample-badge">SAMPLE</span>' if stats['is_sample'] else '<span class="production-badge">PRODUCTION</span>'}</td>
                     </tr>''' for item, stats in sorted_items)}
                 </tbody>
@@ -642,8 +647,8 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
         </div>
 
         <div class="footer">
-            <p>⚠️ Note: Sample parts (cycle time = 480s) are tracked separately and excluded from production hours</p>
-            <p>Running Time Formula: (OK Parts × Cycle Time) / 3600 = Hours</p>
+            <p>⚠️ Note: Sample parts (cycle time = 480 minutes / 8 hours) are tracked separately and excluded from production hours</p>
+            <p>Running Time Formula: (OK Parts × Cycle Time in minutes × 60) / 3600 = Hours</p>
         </div>
     </div>
 
@@ -689,7 +694,7 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
                         borderWidth: 2
                     }},
                     {{
-                        label: 'Sample Hours (480s cycle)',
+                        label: 'Sample Hours (480 min cycle)',
                         data: {json.dumps(sample_hours)},
                         backgroundColor: 'rgba(245, 158, 11, 0.8)',
                         borderColor: 'rgba(245, 158, 11, 1)',
@@ -893,7 +898,7 @@ def generate_report(machine_stats, output_file=None):
     report_lines.append("-" * 100)
     report_lines.append(f"Total Machines: {total_machines}")
     report_lines.append(f"Total Production Hours (excluding samples): {total_production_hours:.2f} hours")
-    report_lines.append(f"Total Sample Hours (cycle time = 480s): {total_sample_hours:.2f} hours")
+    report_lines.append(f"Total Sample Hours (cycle time = 480 min): {total_sample_hours:.2f} hours")
     report_lines.append(f"Total All Hours (including samples): {total_all_hours:.2f} hours")
     report_lines.append("")
 
@@ -912,7 +917,7 @@ def generate_report(machine_stats, output_file=None):
     for machine, stats in sorted_machines:
         report_lines.append(f"Machine: {machine}")
         report_lines.append(f"  Production Hours (excl. samples): {stats['total_hours']:.2f} hours")
-        report_lines.append(f"  Sample Hours (480s cycle time):   {stats['sample_hours']:.2f} hours")
+        report_lines.append(f"  Sample Hours (480 min cycle time):  {stats['sample_hours']:.2f} hours")
         report_lines.append(f"  Total Hours (incl. samples):      {stats['total_hours_with_samples']:.2f} hours")
         report_lines.append(f"  Production Parts:                 {stats['total_parts']:,}")
         report_lines.append(f"  Sample Parts:                     {stats['sample_parts']:,}")
@@ -959,7 +964,8 @@ def generate_report(machine_stats, output_file=None):
     sorted_items = sorted(item_stats.items(), key=lambda x: x[1]['total_hours'], reverse=True)
 
     for item, stats in sorted_items:
-        cycle_times_str = ', '.join(f"{ct}s" for ct in sorted(stats['cycle_times']))
+        # Convert cycle times from seconds back to minutes for display
+        cycle_times_str = ', '.join(f"{ct/60:.1f} min" for ct in sorted(stats['cycle_times']))
         sample_flag = " [SAMPLE]" if stats['is_sample'] else ""
         report_lines.append(f"Item: {item}{sample_flag}")
         report_lines.append(f"  Production Hours: {stats['total_hours']:.2f} hours")
@@ -970,7 +976,7 @@ def generate_report(machine_stats, output_file=None):
 
     # Footer
     report_lines.append("=" * 100)
-    report_lines.append("NOTE: Sample parts (cycle time = 480s) are tracked separately and excluded from production hours")
+    report_lines.append("NOTE: Sample parts (cycle time = 480 minutes / 8 hours) are tracked separately and excluded from production hours")
     report_lines.append("=" * 100)
 
     report_text = '\n'.join(report_lines)
