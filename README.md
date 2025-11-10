@@ -39,27 +39,73 @@ Then enter the folder path when prompted.
 
 ## Output Files
 
-The script generates two files with timestamps:
+The script generates three files with timestamps:
 
-1. **Text Report** (`cnc_running_hours_report_YYYYMMDD_HHMMSS.txt`)
+1. **HTML Dashboard** (`cnc_running_hours_dashboard_YYYYMMDD_HHMMSS.html`) ⭐ **Main Output**
+   - Beautiful interactive dashboard with modern UI
+   - Stacked bar chart showing production vs sample hours for all machines
+   - Machine selector dropdown for detailed breakdowns
+   - Filterable item-level production table
+   - Interactive tooltips and real-time filtering
+   - Summary cards with key metrics
+   - Responsive design that works on any screen size
+
+2. **Text Report** (`cnc_running_hours_report_YYYYMMDD_HHMMSS.txt`)
    - Summary statistics
    - Detailed machine breakdown with production/sample hours
    - Item-level production summary
    - Sample production records flagged
 
-2. **JSON Data** (`cnc_running_hours_data_YYYYMMDD_HHMMSS.json`)
+3. **JSON Data** (`cnc_running_hours_data_YYYYMMDD_HHMMSS.json`)
    - Machine-level statistics in structured format
    - Easy to import into Excel, Power BI, or other analysis tools
 
 ## Report Sections
 
-### 1. Summary
+### HTML Dashboard Sections:
+
+#### 1. Summary Cards
+- Production Hours (excluding samples) - Green card
+- Sample Hours (480s cycle only) - Orange card
+- Total Hours (all production) - Blue card
+- Total Machines & Parts - Purple card
+
+#### 2. Machine Running Hours Chart
+- Interactive stacked bar chart
+- Production hours (green) vs Sample hours (orange)
+- Hover tooltips with detailed information
+- Visual comparison of all machines
+
+#### 3. Machine Details Breakdown
+- **Dropdown selector** to choose a machine
+- Detailed statistics grid:
+  - Production hours, Sample hours, Total hours
+  - Production parts, Sample parts
+  - Items produced count
+- Active dates, shifts, and items lists
+- **Production Records Table** with:
+  - Date, Shift, Item, Operation
+  - Parts produced, Cycle time, Hours calculated
+  - Type badge (SAMPLE/PRODUCTION)
+  - Operator information
+
+#### 4. Item-Level Production Summary
+- **Filterable table** (search by item name)
+- Production hours per item
+- Total parts produced
+- Number of machines used
+- Cycle times
+- Type badge (SAMPLE/PRODUCTION)
+
+### Text Report Sections:
+
+#### 1. Summary
 - Total machines analyzed
 - Total production hours (excluding samples)
 - Total sample hours (cycle time = 480s)
 - Total all hours (including samples)
 
-### 2. Machine Breakdown
+#### 2. Machine Breakdown
 For each machine:
 - Production hours (excluding sample parts)
 - Sample hours (480s cycle time only)
@@ -69,7 +115,7 @@ For each machine:
 - Items produced
 - **List of sample production records** (if any)
 
-### 3. Item-Level Summary
+#### 3. Item-Level Summary
 For each item/part number:
 - Total production hours
 - Total parts produced

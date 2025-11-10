@@ -1,0 +1,194 @@
+{
+  "106 - BNE 51MYY Miyano": {
+    "total_hours": 0.2704166666666667,
+    "total_hours_with_samples": 0.2704166666666667,
+    "sample_hours": 0.0,
+    "total_parts": 649,
+    "sample_parts": 0,
+    "dates": [
+      "2025-11-07"
+    ],
+    "items": [
+      "AU.KB2045-B-0208-DRE"
+    ],
+    "shifts": [
+      "S1",
+      "S2",
+      "S3"
+    ]
+  },
+  "108 - Nomura N32": {
+    "total_hours": 0.060833333333333336,
+    "total_hours_with_samples": 0.060833333333333336,
+    "sample_hours": 0.0,
+    "total_parts": 30,
+    "sample_parts": 0,
+    "dates": [
+      "2025-11-07"
+    ],
+    "items": [
+      "1535100044"
+    ],
+    "shifts": [
+      "S1"
+    ]
+  },
+  "109 - Miyano ABX 80": {
+    "total_hours": 0.3115,
+    "total_hours_with_samples": 0.3115,
+    "sample_hours": 0.0,
+    "total_parts": 534,
+    "sample_parts": 0,
+    "dates": [
+      "2025-11-07"
+    ],
+    "items": [
+      "AU.KB3068-B-0208-DRE"
+    ],
+    "shifts": [
+      "S1",
+      "S2",
+      "S3"
+    ]
+  },
+  "201 - VM740S Neway": {
+    "total_hours": 0.034027777777777775,
+    "total_hours_with_samples": 0.034027777777777775,
+    "sample_hours": 0.0,
+    "total_parts": 36,
+    "sample_parts": 0,
+    "dates": [
+      "2025-11-07"
+    ],
+    "items": [
+      "F-320745-0321.APL.ACT",
+      "R900305232"
+    ],
+    "shifts": [
+      "S1",
+      "S2"
+    ]
+  },
+  "204 - Hec 400": {
+    "total_hours": 0.192,
+    "total_hours_with_samples": 0.192,
+    "sample_hours": 0.0,
+    "total_parts": 108,
+    "sample_parts": 0,
+    "dates": [
+      "2025-11-07"
+    ],
+    "items": [
+      "TK.KWVE20-B-A-L-0038-WW1"
+    ],
+    "shifts": [
+      "S1",
+      "S2",
+      "S3"
+    ]
+  },
+  "206 - BA 322 SW": {
+    "total_hours": 0.2708333333333333,
+    "total_hours_with_samples": 0.2708333333333333,
+    "sample_hours": 0.0,
+    "total_parts": 65,
+    "sample_parts": 0,
+    "dates": [
+      "2025-11-07"
+    ],
+    "items": [
+      "R901321450"
+    ],
+    "shifts": [
+      "S1",
+      "S2"
+    ]
+  },
+  "208 - YASDA PX30i": {
+    "total_hours": 0.2088888888888889,
+    "total_hours_with_samples": 0.2088888888888889,
+    "sample_hours": 0.0,
+    "total_parts": 16,
+    "sample_parts": 0,
+    "dates": [
+      "2025-11-07"
+    ],
+    "items": [
+      "F-320745-1901.DL.ACT15"
+    ],
+    "shifts": [
+      "S1",
+      "S2"
+    ]
+  },
+  "210 - SW MEXIC": {
+    "total_hours": 0.297,
+    "total_hours_with_samples": 0.297,
+    "sample_hours": 0.0,
+    "total_parts": 243,
+    "sample_parts": 0,
+    "dates": [
+      "2025-11-07"
+    ],
+    "items": [
+      "TK.KWVE15-B-A-ESC-0038-WW1"
+    ],
+    "shifts": [
+      "S1",
+      "S2",
+      "S3"
+    ]
+  },
+  "211 - SW": {
+    "total_hours": 0.11555555555555555,
+    "total_hours_with_samples": 0.6488888888888888,
+    "sample_hours": 0.5333333333333333,
+    "total_parts": 103,
+    "sample_parts": 4,
+    "dates": [
+      "2025-11-07"
+    ],
+    "items": [
+      "0",
+      "TK.KWVE30-B-A-H-0038-WW1",
+      "TK.KWVE30-B-A-S-0038-WW1"
+    ],
+    "shifts": [
+      "S1",
+      "S2",
+      "S3"
+    ]
+  },
+  "304 - GSU 30B Shigiya": {
+    "total_hours": 0.07,
+    "total_hours_with_samples": 0.07,
+    "sample_hours": 0.0,
+    "total_parts": 42,
+    "sample_parts": 0,
+    "dates": [
+      "2025-11-07"
+    ],
+    "items": [
+      "R900601678"
+    ],
+    "shifts": [
+      "S1"
+    ]
+  },
+  "306 - Kellenberger 100": {
+    "total_hours": 0.09888888888888889,
+    "total_hours_with_samples": 0.09888888888888889,
+    "sample_hours": 0.0,
+    "total_parts": 20,
+    "sample_parts": 0,
+    "dates": [
+      "2025-11-07"
+    ],
+    "items": [
+      "F-552668.01-0012"
+    ],
+    "shifts": [
+      "S1"
+    ]
+  }
+}

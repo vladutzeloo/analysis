@@ -1,0 +1,229 @@
+====================================================================================================
+CNC MACHINE ACTUAL RUNNING TIME ANALYSIS REPORT
+====================================================================================================
+Generated: 2025-11-10 11:36:02
+
+SUMMARY
+----------------------------------------------------------------------------------------------------
+Total Machines: 11
+Total Production Hours (excluding samples): 1.93 hours
+Total Sample Hours (cycle time = 480s): 0.53 hours
+Total All Hours (including samples): 2.46 hours
+
+DETAILED MACHINE BREAKDOWN
+----------------------------------------------------------------------------------------------------
+
+Machine: 109 - Miyano ABX 80
+  Production Hours (excl. samples): 0.31 hours
+  Sample Hours (480s cycle time):   0.00 hours
+  Total Hours (incl. samples):      0.31 hours
+  Production Parts:                 534
+  Sample Parts:                     0
+  Total Parts:                      534
+  Dates Active:                     2025-11-07
+  Shifts:                           S1, S2, S3
+  Items Produced:                   1
+
+Machine: 210 - SW MEXIC
+  Production Hours (excl. samples): 0.30 hours
+  Sample Hours (480s cycle time):   0.00 hours
+  Total Hours (incl. samples):      0.30 hours
+  Production Parts:                 243
+  Sample Parts:                     0
+  Total Parts:                      243
+  Dates Active:                     2025-11-07
+  Shifts:                           S1, S2, S3
+  Items Produced:                   1
+
+Machine: 206 - BA 322 SW
+  Production Hours (excl. samples): 0.27 hours
+  Sample Hours (480s cycle time):   0.00 hours
+  Total Hours (incl. samples):      0.27 hours
+  Production Parts:                 65
+  Sample Parts:                     0
+  Total Parts:                      65
+  Dates Active:                     2025-11-07
+  Shifts:                           S1, S2
+  Items Produced:                   1
+
+Machine: 106 - BNE 51MYY Miyano
+  Production Hours (excl. samples): 0.27 hours
+  Sample Hours (480s cycle time):   0.00 hours
+  Total Hours (incl. samples):      0.27 hours
+  Production Parts:                 649
+  Sample Parts:                     0
+  Total Parts:                      649
+  Dates Active:                     2025-11-07
+  Shifts:                           S1, S2, S3
+  Items Produced:                   1
+
+Machine: 208 - YASDA PX30i
+  Production Hours (excl. samples): 0.21 hours
+  Sample Hours (480s cycle time):   0.00 hours
+  Total Hours (incl. samples):      0.21 hours
+  Production Parts:                 16
+  Sample Parts:                     0
+  Total Parts:                      16
+  Dates Active:                     2025-11-07
+  Shifts:                           S1, S2
+  Items Produced:                   1
+
+Machine: 204 - Hec 400
+  Production Hours (excl. samples): 0.19 hours
+  Sample Hours (480s cycle time):   0.00 hours
+  Total Hours (incl. samples):      0.19 hours
+  Production Parts:                 108
+  Sample Parts:                     0
+  Total Parts:                      108
+  Dates Active:                     2025-11-07
+  Shifts:                           S1, S2, S3
+  Items Produced:                   1
+
+Machine: 211 - SW
+  Production Hours (excl. samples): 0.12 hours
+  Sample Hours (480s cycle time):   0.53 hours
+  Total Hours (incl. samples):      0.65 hours
+  Production Parts:                 103
+  Sample Parts:                     4
+  Total Parts:                      107
+  Dates Active:                     2025-11-07
+  Shifts:                           S1, S2, S3
+  Items Produced:                   3
+  Sample Production Records:
+    - 2025-11-07 | S1 | 0 | 4 parts
+
+Machine: 306 - Kellenberger 100
+  Production Hours (excl. samples): 0.10 hours
+  Sample Hours (480s cycle time):   0.00 hours
+  Total Hours (incl. samples):      0.10 hours
+  Production Parts:                 20
+  Sample Parts:                     0
+  Total Parts:                      20
+  Dates Active:                     2025-11-07
+  Shifts:                           S1
+  Items Produced:                   1
+
+Machine: 304 - GSU 30B Shigiya
+  Production Hours (excl. samples): 0.07 hours
+  Sample Hours (480s cycle time):   0.00 hours
+  Total Hours (incl. samples):      0.07 hours
+  Production Parts:                 42
+  Sample Parts:                     0
+  Total Parts:                      42
+  Dates Active:                     2025-11-07
+  Shifts:                           S1
+  Items Produced:                   1
+
+Machine: 108 - Nomura N32
+  Production Hours (excl. samples): 0.06 hours
+  Sample Hours (480s cycle time):   0.00 hours
+  Total Hours (incl. samples):      0.06 hours
+  Production Parts:                 30
+  Sample Parts:                     0
+  Total Parts:                      30
+  Dates Active:                     2025-11-07
+  Shifts:                           S1
+  Items Produced:                   1
+
+Machine: 201 - VM740S Neway
+  Production Hours (excl. samples): 0.03 hours
+  Sample Hours (480s cycle time):   0.00 hours
+  Total Hours (incl. samples):      0.03 hours
+  Production Parts:                 36
+  Sample Parts:                     0
+  Total Parts:                      36
+  Dates Active:                     2025-11-07
+  Shifts:                           S1, S2
+  Items Produced:                   2
+
+====================================================================================================
+ITEM-LEVEL PRODUCTION SUMMARY
+----------------------------------------------------------------------------------------------------
+
+Item: AU.KB3068-B-0208-DRE
+  Production Hours: 0.31 hours
+  Total Parts:      534
+  Machines:         109 - Miyano ABX 80
+  Cycle Times:      2.1s
+
+Item: TK.KWVE15-B-A-ESC-0038-WW1
+  Production Hours: 0.30 hours
+  Total Parts:      243
+  Machines:         210 - SW MEXIC
+  Cycle Times:      4.4s
+
+Item: R901321450
+  Production Hours: 0.27 hours
+  Total Parts:      65
+  Machines:         206 - BA 322 SW
+  Cycle Times:      15.0s
+
+Item: AU.KB2045-B-0208-DRE
+  Production Hours: 0.27 hours
+  Total Parts:      649
+  Machines:         106 - BNE 51MYY Miyano
+  Cycle Times:      1.5s
+
+Item: F-320745-1901.DL.ACT15
+  Production Hours: 0.21 hours
+  Total Parts:      16
+  Machines:         208 - YASDA PX30i
+  Cycle Times:      47.0s
+
+Item: TK.KWVE20-B-A-L-0038-WW1
+  Production Hours: 0.19 hours
+  Total Parts:      108
+  Machines:         204 - Hec 400
+  Cycle Times:      6.4s
+
+Item: TK.KWVE30-B-A-H-0038-WW1
+  Production Hours: 0.11 hours
+  Total Parts:      95
+  Machines:         211 - SW
+  Cycle Times:      4.0s
+
+Item: F-552668.01-0012
+  Production Hours: 0.10 hours
+  Total Parts:      20
+  Machines:         306 - Kellenberger 100
+  Cycle Times:      17.8s
+
+Item: R900601678
+  Production Hours: 0.07 hours
+  Total Parts:      42
+  Machines:         304 - GSU 30B Shigiya
+  Cycle Times:      6.0s
+
+Item: 1535100044
+  Production Hours: 0.06 hours
+  Total Parts:      30
+  Machines:         108 - Nomura N32
+  Cycle Times:      7.3s
+
+Item: R900305232
+  Production Hours: 0.03 hours
+  Total Parts:      35
+  Machines:         201 - VM740S Neway
+  Cycle Times:      3.0s
+
+Item: TK.KWVE30-B-A-S-0038-WW1
+  Production Hours: 0.01 hours
+  Total Parts:      8
+  Machines:         211 - SW
+  Cycle Times:      4.5s
+
+Item: F-320745-0321.APL.ACT
+  Production Hours: 0.00 hours
+  Total Parts:      1
+  Machines:         201 - VM740S Neway
+  Cycle Times:      17.5s
+
+Item: 0 [SAMPLE]
+  Production Hours: 0.00 hours
+  Total Parts:      0
+  Machines:         211 - SW
+  Cycle Times:      480.0s
+
+====================================================================================================
+NOTE: Sample parts (cycle time = 480s) are tracked separately and excluded from production hours
+====================================================================================================
