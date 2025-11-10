@@ -216,7 +216,7 @@ def calculate_running_hours(records, exclude_samples=True):
     return dict(machine_stats)
 
 
-def generate_html_report(machine_stats, all_records, output_file):
+def generate_html_report(machine_stats, all_records, output_file, month_filter='all'):
     """
     Generate a beautiful interactive HTML report with charts and filtering
     """
@@ -533,7 +533,7 @@ def generate_html_report(machine_stats, all_records, output_file):
     <div class="container">
         <div class="header">
             <h1>⚙️ CNC Machine Running Time Analysis</h1>
-            <p class="subtitle">Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | Date Range: {date_range}</p>
+            <p class="subtitle">Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | Date Range: {date_range} | Filter: {month_filter}</p>
         </div>
 
         <div class="summary-cards">
@@ -952,6 +952,37 @@ def generate_report(machine_stats, output_file=None):
     return report_text
 
 
+def get_available_months(records):
+    """Extract unique months from records"""
+    months = set()
+    for record in records:
+        date_str = record.get('date', '')
+        if date_str and date_str != 'Unknown':
+            # Extract YYYY-MM from date
+            try:
+                month = date_str[:7]  # Get YYYY-MM
+                months.add(month)
+            except:
+                pass
+    return sorted(list(months))
+
+
+def filter_records_by_month(records, selected_months):
+    """Filter records to only include selected months"""
+    if not selected_months or 'all' in [m.lower() for m in selected_months]:
+        return records
+
+    filtered = []
+    for record in records:
+        date_str = record.get('date', '')
+        if date_str and date_str != 'Unknown':
+            month = date_str[:7]  # Get YYYY-MM
+            if month in selected_months:
+                filtered.append(record)
+
+    return filtered
+
+
 def main():
     """Main function to analyze CNC machine running times"""
     print("🏭 CNC Machine Running Time Analysis")
@@ -972,7 +1003,7 @@ def main():
     html_files = []
     for root, dirs, files in os.walk(folder_path):
         for file in files:
-            if file.endswith('.html'):
+            if file.endswith('.html') and not file.startswith('cnc_running_hours_dashboard'):
                 html_files.append(os.path.join(root, file))
 
     if not html_files:
@@ -994,15 +1025,49 @@ def main():
     print(f"✅ Total records extracted: {len(all_records)}")
     print()
 
+    # Show available months
+    available_months = get_available_months(all_records)
+    if available_months:
+        print("📅 Available months in data:")
+        for i, month in enumerate(available_months, 1):
+            month_records = [r for r in all_records if r.get('date', '').startswith(month)]
+            print(f"   {i}. {month} ({len(month_records)} records)")
+        print()
+
+        # Ask user which month(s) to analyze
+        month_choice = input("Enter month(s) to analyze (e.g., '2025-11' or '2025-10,2025-11' or 'all'): ").strip()
+
+        if month_choice.lower() == 'all' or not month_choice:
+            selected_months = ['all']
+            print("✅ Analyzing all months")
+        else:
+            selected_months = [m.strip() for m in month_choice.split(',')]
+            print(f"✅ Analyzing month(s): {', '.join(selected_months)}")
+
+        # Filter records by selected months
+        all_records = filter_records_by_month(all_records, selected_months)
+        print(f"📊 Filtered to {len(all_records)} records")
+        print()
+    else:
+        print("⚠️  No date information found in records")
+        selected_months = ['all']
+        print()
+
     # Calculate running hours
     machine_stats = calculate_running_hours(all_records, exclude_samples=True)
 
     # Generate reports
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
+    # Format month filter for display
+    if selected_months == ['all'] or not selected_months:
+        month_display = "All Months"
+    else:
+        month_display = ", ".join(selected_months)
+
     # Generate HTML report (main output)
     html_file = f"cnc_running_hours_dashboard_{timestamp}.html"
-    generate_html_report(machine_stats, all_records, html_file)
+    generate_html_report(machine_stats, all_records, html_file, month_filter=month_display)
 
     # Generate text report (backup)
     txt_file = f"cnc_running_hours_report_{timestamp}.txt"
