@@ -1,0 +1,2661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OLSTRAL Production Dashboard - 2025-11-07</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d1b1b 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #ffffff;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: linear-gradient(135deg, #2d1b1b 0%, #1a1a1a 100%);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(220, 38, 38, 0.3);
+            overflow: hidden;
+            border: 1px solid rgba(220, 38, 38, 0.3);
+        }
+        
+        .no-staff-alert {
+            background: linear-gradient(135deg, #ff3b30 0%, #ff1744 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+            box-shadow: 0 4px 8px rgba(255, 59, 48, 0.3);
+            border-bottom: 3px solid #ff1744;
+            animation: noStaffPulse 2s infinite;
+        }
+        
+        @keyframes noStaffPulse {
+            0% { box-shadow: 0 4px 8px rgba(255, 59, 48, 0.3); }
+            50% { box-shadow: 0 8px 16px rgba(255, 59, 48, 0.6); }
+            100% { box-shadow: 0 4px 8px rgba(255, 59, 48, 0.3); }
+        }
+        
+        .no-staff-alert .alert-icon {
+            font-size: 1.5rem;
+            margin-right: 10px;
+            animation: bounce 1s infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+        
+        .cycle-time-alert {
+            background: linear-gradient(135deg, #ff6b35 0%, #ff4500 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+            box-shadow: 0 4px 8px rgba(255, 107, 53, 0.3);
+            border-bottom: 3px solid #ff4500;
+            animation: alertPulse 2s infinite;
+        }
+        
+        @keyframes alertPulse {
+            0% { box-shadow: 0 4px 8px rgba(255, 107, 53, 0.3); }
+            50% { box-shadow: 0 8px 16px rgba(255, 107, 53, 0.6); }
+            100% { box-shadow: 0 4px 8px rgba(255, 107, 53, 0.3); }
+        }
+        
+        .cycle-time-alert .alert-icon {
+            font-size: 1.5rem;
+            margin-right: 10px;
+            animation: bounce 1s infinite;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .logo-section {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .logo {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1.8rem;
+            font-weight: bold;
+            letter-spacing: 2px;
+            margin-right: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin: 0;
+        }
+        
+        .header .date {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin-top: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 16px;
+            border-radius: 6px;
+            display: inline-block;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 30px;
+            background: rgba(45, 27, 27, 0.5);
+        }
+        
+        .summary-card {
+            background: linear-gradient(135deg, #2d1b1b 0%, #1a1a1a 100%);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            text-align: center;
+            position: relative;
+            border: 1px solid rgba(220, 38, 38, 0.3);
+            transition: transform 0.3s ease;
+        }
+        
+        .summary-card:hover { transform: translateY(-5px); }
+        
+        .summary-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--card-color);
+        }
+        
+        .summary-card.total-parts { --card-color: #dc2626; }
+        .summary-card.ok-parts { --card-color: #059669; }
+        .summary-card.nok-parts { --card-color: #dc2626; }
+        .summary-card.quality-rate { --card-color: #f59e0b; }
+        .summary-card.internal-orders { --card-color: #ea580c; }
+        .summary-card.oee-card { --card-color: #dc2626; }
+        .summary-card.downtime-card { --card-color: #dc2626; }
+        .summary-card.cycle-time-missing { --card-color: #ff6b35; }
+        .summary-card.no-staff-card { --card-color: #ff3b30; }
+        
+        .summary-card h3 {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+        
+        .summary-card .value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--card-color);
+            margin-bottom: 5px;
+        }
+        
+        .summary-card .label {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.9rem;
+        }
+        
+        .no-staff-row { 
+            background: linear-gradient(135deg, rgba(255, 59, 48, 0.3) 0%, rgba(255, 23, 68, 0.3) 100%) !important; 
+            border-left: 4px solid #ff3b30 !important;
+            animation: noStaffRowPulse 3s infinite;
+        }
+        
+        @keyframes noStaffRowPulse {
+            0% { background: linear-gradient(135deg, rgba(255, 59, 48, 0.2) 0%, rgba(255, 23, 68, 0.2) 100%); }
+            50% { background: linear-gradient(135deg, rgba(255, 59, 48, 0.4) 0%, rgba(255, 23, 68, 0.4) 100%); }
+            100% { background: linear-gradient(135deg, rgba(255, 59, 48, 0.2) 0%, rgba(255, 23, 68, 0.2) 100%); }
+        }
+        
+        .charts-section {
+            padding: 30px;
+            background: rgba(45, 27, 27, 0.3);
+        }
+        
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .chart-container {
+            background: linear-gradient(135deg, #2d1b1b 0%, #1a1a1a 100%);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            border: 1px solid rgba(220, 38, 38, 0.3);
+        }
+        
+        .chart-container h3 {
+            color: #ffffff;
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .chart-wrapper { position: relative; height: 300px; }
+        
+        .machine-chart-wrapper {
+            position: relative;
+            height: 600px;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        
+        .operator-chart-wrapper {
+            position: relative;
+            height: 600px;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        
+        .machine-chart-wrapper::-webkit-scrollbar,
+        .operator-chart-wrapper::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .machine-chart-wrapper::-webkit-scrollbar-track,
+        .operator-chart-wrapper::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+        
+        .machine-chart-wrapper::-webkit-scrollbar-thumb,
+        .operator-chart-wrapper::-webkit-scrollbar-thumb {
+            background: rgba(220, 38, 38, 0.6);
+            border-radius: 4px;
+        }
+        
+        .machine-chart-wrapper::-webkit-scrollbar-thumb:hover,
+        .operator-chart-wrapper::-webkit-scrollbar-thumb:hover {
+            background: rgba(220, 38, 38, 0.8);
+        }
+        
+        .downtime-section {
+            padding: 30px;
+            background: linear-gradient(135deg, rgba(220, 38, 38, 0.1) 0%, rgba(153, 27, 27, 0.1) 100%);
+            border-top: 5px solid #dc2626;
+            border-bottom: 3px solid #991b1b;
+            box-shadow: inset 0 0 20px rgba(220, 38, 38, 0.1);
+        }
+        
+        .downtime-header {
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            text-align: center;
+            box-shadow: 0 8px 16px rgba(220, 38, 38, 0.3);
+        }
+        
+        .downtime-header h2 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        
+        .downtime-header .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            font-weight: 500;
+        }
+        
+        .downtime-kpis {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .downtime-kpi-card {
+            background: linear-gradient(135deg, #2d1b1b 0%, #1a1a1a 100%);
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            border: 2px solid rgba(220, 38, 38, 0.4);
+            box-shadow: 0 4px 8px rgba(220, 38, 38, 0.2);
+            transition: transform 0.3s ease;
+        }
+        
+        .downtime-kpi-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .downtime-kpi-card h4 {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+        
+        .downtime-kpi-card .kpi-value {
+            font-size: 2.2rem;
+            font-weight: bold;
+            color: #dc2626;
+            margin-bottom: 5px;
+        }
+        
+        .downtime-kpi-card .kpi-label {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.8rem;
+        }
+        
+        .downtime-charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .downtime-charts-full {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .downtime-machines-list {
+            background: linear-gradient(135deg, #2d1b1b 0%, #1a1a1a 100%);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            border: 1px solid rgba(220, 38, 38, 0.3);
+        }
+        
+        .machine-downtime-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            border-left: 5px solid var(--severity-color);
+            transition: all 0.3s ease;
+        }
+        
+        .machine-downtime-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
+        
+        .machine-downtime-name {
+            font-weight: 600;
+            color: #ffffff;
+            font-size: 1rem;
+        }
+        
+        .machine-downtime-impact {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin-top: 4px;
+        }
+        
+        .machine-downtime-value {
+            font-weight: 800;
+            color: #dc2626;
+            font-size: 1.3rem;
+        }
+        
+        .machine-downtime-hours {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+            margin-top: 2px;
+        }
+        
+        .downtime-breakdown {
+            background: linear-gradient(135deg, #2d1b1b 0%, #1a1a1a 100%);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            border: 1px solid rgba(220, 38, 38, 0.3);
+        }
+        
+        .machine-selector {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #dc2626;
+            border-radius: 12px;
+            background: #2d1b1b;
+            color: #ffffff;
+            font-size: 1rem;
+            margin-bottom: 20px;
+        }
+        
+        .breakdown-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .breakdown-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .breakdown-category {
+            font-weight: 600;
+            color: #ffffff;
+        }
+        
+        .breakdown-value {
+            font-weight: 700;
+            color: #dc2626;
+        }
+        
+        .breakdown-percent {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+            margin-left: 8px;
+        }
+        
+        .comment-item {
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            margin: 8px 0;
+            font-size: 0.9rem;
+        }
+        
+        .comment-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        
+        .comment-meta {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .comment-downtime {
+            font-weight: bold;
+            color: #8b5cf6;
+        }
+        
+        .comment-text {
+            color: #ffffff;
+            font-style: italic;
+            line-height: 1.4;
+            margin-top: 6px;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            border-left: 3px solid #8b5cf6;
+        }
+        
+        .no-comments {
+            color: rgba(255, 255, 255, 0.5);
+            font-style: italic;
+            text-align: center;
+            padding: 15px;
+        }
+        
+        .table-section {
+            padding: 30px;
+            background: rgba(45, 27, 27, 0.5);
+        }
+        
+        .table-section h2 {
+            color: #ffffff;
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .table-container {
+            background: linear-gradient(135deg, #2d1b1b 0%, #1a1a1a 100%);
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            border: 1px solid rgba(220, 38, 38, 0.3);
+        }
+        
+        table { width: 100%; border-collapse: collapse; }
+        
+        th {
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+            color: white;
+            padding: 15px 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+        }
+        
+        td {
+            padding: 12px;
+            border-bottom: 1px solid rgba(220, 38, 38, 0.2);
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        tr:hover { background: rgba(220, 38, 38, 0.1); }
+        tr:nth-child(even) { background: rgba(45, 27, 27, 0.3); }
+        
+        .quality-excellent { background: rgba(5, 150, 105, 0.2) !important; color: #10b981; font-weight: 600; }
+        .quality-good { background: rgba(245, 158, 11, 0.2) !important; color: #f59e0b; font-weight: 600; }
+        .quality-poor { background: rgba(220, 38, 38, 0.2) !important; color: #ef4444; font-weight: 600; }
+        
+        .cycle-time-excellent { background: rgba(5, 150, 105, 0.2) !important; color: #10b981; font-weight: 600; }
+        .cycle-time-missing { background: rgba(220, 38, 38, 0.2) !important; color: #ef4444; font-weight: 600; }
+        
+        .setup-yes { background: rgba(245, 158, 11, 0.2) !important; color: #f59e0b; font-weight: 600; }
+        .setup-no { color: rgba(255, 255, 255, 0.4); }
+        
+        .oee-excellent { background: rgba(5, 150, 105, 0.2) !important; color: #10b981; font-weight: 600; }
+        .oee-good { background: rgba(245, 158, 11, 0.2) !important; color: #f59e0b; font-weight: 600; }
+        .oee-poor { background: rgba(220, 38, 38, 0.2) !important; color: #ef4444; font-weight: 600; }
+        .oee-no-staff { 
+            background: linear-gradient(135deg, rgba(255, 59, 48, 0.4) 0%, rgba(255, 23, 68, 0.4) 100%) !important; 
+            color: #ff3b30; 
+            font-weight: 700; 
+            font-style: italic;
+            border: 2px solid rgba(255, 59, 48, 0.6) !important;
+            animation: noStaffOeePulse 3s infinite;
+        }
+        .oee-missing { 
+            background: linear-gradient(135deg, rgba(255, 107, 53, 0.3) 0%, rgba(255, 69, 0, 0.3) 100%) !important; 
+            color: #ff6b35; 
+            font-weight: 700; 
+            font-style: italic;
+            border: 2px solid rgba(255, 107, 53, 0.5) !important;
+            animation: cycleMissing 2s infinite;
+        }
+        
+        @keyframes noStaffOeePulse {
+            0% { background: linear-gradient(135deg, rgba(255, 59, 48, 0.3) 0%, rgba(255, 23, 68, 0.3) 100%); }
+            50% { background: linear-gradient(135deg, rgba(255, 59, 48, 0.6) 0%, rgba(255, 23, 68, 0.6) 100%); }
+            100% { background: linear-gradient(135deg, rgba(255, 59, 48, 0.3) 0%, rgba(255, 23, 68, 0.3) 100%); }
+        }
+        
+        @keyframes cycleMissing {
+            0% { background: linear-gradient(135deg, rgba(255, 107, 53, 0.3) 0%, rgba(255, 69, 0, 0.3) 100%); }
+            50% { background: linear-gradient(135deg, rgba(255, 107, 53, 0.5) 0%, rgba(255, 69, 0, 0.5) 100%); }
+            100% { background: linear-gradient(135deg, rgba(255, 107, 53, 0.3) 0%, rgba(255, 69, 0, 0.3) 100%); }
+        }
+        
+        .oee-tooltip { position: relative; cursor: help; }
+        .oee-tooltip:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            z-index: 1000;
+            margin-bottom: 5px;
+        }
+        
+        .machine-name { font-weight: 600; color: #ffffff; }
+        .internal-order-badge { background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 500; }
+        .operator { color: rgba(255, 255, 255, 0.7); }
+        .status-indicator { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; }
+        .status-excellent { background: #10b981; }
+        .status-good { background: #f59e0b; }
+        .status-poor { background: #ef4444; }
+        
+        .impact-high { background: rgba(220, 38, 38, 0.2) !important; color: #ef4444; font-weight: 600; }
+        .impact-medium { background: rgba(245, 158, 11, 0.2) !important; color: #f59e0b; font-weight: 600; }
+        .impact-low { background: rgba(107, 114, 128, 0.2) !important; color: #6b7280; font-weight: 600; }
+        
+        .missing-section { 
+            padding: 30px; 
+            background: linear-gradient(135deg, rgba(255, 107, 53, 0.1) 0%, rgba(255, 69, 0, 0.1) 100%); 
+            border-top: 5px solid #ff6b35; 
+            border-bottom: 3px solid #ff4500;
+            box-shadow: inset 0 0 20px rgba(255, 107, 53, 0.2);
+        }
+        .missing-header { 
+            background: linear-gradient(135deg, #ff6b35 0%, #ff4500 100%); 
+            color: white; 
+            padding: 25px; 
+            border-radius: 15px; 
+            margin-bottom: 25px; 
+            text-align: center;
+            box-shadow: 0 8px 16px rgba(255, 107, 53, 0.3);
+        }
+        .missing-header h2 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        .missing-header .alert-subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            font-weight: 500;
+        }
+        .missing-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 25px; }
+        .missing-stat-card { 
+            background: linear-gradient(135deg, #2d1b1b 0%, #1a1a1a 100%); 
+            padding: 25px; 
+            border-radius: 15px; 
+            text-align: center; 
+            border: 2px solid rgba(255, 107, 53, 0.4);
+            box-shadow: 0 4px 8px rgba(255, 107, 53, 0.2);
+        }
+        .missing-stat-card h4 { color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin-bottom: 10px; text-transform: uppercase; }
+        .missing-stat-card .stat-value { font-size: 2.2rem; font-weight: bold; color: #ff6b35; }
+        
+        .capacity-oee-section {
+            padding: 30px;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%);
+            border-top: 5px solid #8b5cf6;
+            border-bottom: 3px solid #7c3aed;
+        }
+        
+        .capacity-oee-header {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            text-align: center;
+            box-shadow: 0 8px 16px rgba(139, 92, 246, 0.3);
+        }
+        
+        .capacity-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .capacity-detail-card {
+            background: linear-gradient(135deg, #2d1b1b 0%, #1a1a1a 100%);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid rgba(139, 92, 246, 0.4);
+            box-shadow: 0 4px 8px rgba(139, 92, 246, 0.2);
+        }
+        
+        .capacity-detail-card h4 {
+            color: #8b5cf6;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .capacity-metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .capacity-metric {
+            text-align: center;
+            padding: 10px;
+            background: rgba(139, 92, 246, 0.1);
+            border-radius: 8px;
+        }
+        
+        .capacity-metric .label {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.8rem;
+            margin-bottom: 5px;
+        }
+        
+        .capacity-metric .value {
+            color: #8b5cf6;
+            font-size: 1.4rem;
+            font-weight: bold;
+        }
+        
+        .footer { background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); color: rgba(255, 255, 255, 0.8); text-align: center; padding: 20px; font-size: 0.9rem; }
+        
+        @media (max-width: 768px) {
+            .charts-grid { grid-template-columns: 1fr; }
+            .downtime-charts-grid { grid-template-columns: 1fr; }
+            .summary-grid { grid-template-columns: repeat(2, 1fr); }
+            .logo-section { flex-direction: column; gap: 10px; }
+            .logo { margin-right: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Add NO STAFF alert banner if there are unstaffed machines -->
+        
+        
+        <!-- Add cycle time alert banner if there are missing cycle times -->
+        
+        
+        <div class="header">
+            <div class="logo-section">
+                <div class="logo">OLSTRAL</div>
+                <h1>🏭 Production Dashboard</h1>
+            </div>
+            <div class="date">NO CONSOLIDATION - Direct Data Processing - Friday, November 07, 2025</div>
+        </div>
+        
+        <div class="summary-grid">
+            <div class="summary-card total-parts">
+                <h3>Total Parts</h3>
+                <div class="value">1,895</div>
+                <div class="label">Parts Produced</div>
+            </div>
+            <div class="summary-card ok-parts">
+                <h3>OK Parts</h3>
+                <div class="value">1,850</div>
+                <div class="label">Quality Parts</div>
+            </div>
+            <div class="summary-card nok-parts">
+                <h3>NOK Parts</h3>
+                <div class="value">45</div>
+                <div class="label">Defective Parts</div>
+            </div>
+            <div class="summary-card quality-rate">
+                <h3>Quality Rate</h3>
+                <div class="value">97.6%</div>
+                <div class="label">Overall Quality</div>
+            </div>
+            <div class="summary-card internal-orders">
+                <h3>Internal Orders</h3>
+                <div class="value">14</div>
+                <div class="label">Active Orders</div>
+            </div>
+            <div class="summary-card oee-card">
+                <h3>🎯 MAIN OEE</h3>
+                <div class="value">63.3%</div>
+                <div class="label">Simple Average OEE - Target: 75% (NO STAFF = 0% in denominator)</div>
+            </div>
+            <div class="summary-card downtime-card">
+                <h3>⏱️ Total Downtime</h3>
+                <div class="value">1133</div>
+                <div class="label">Minutes Lost</div>
+            </div>
+            <div class="summary-card downtime-card">
+                <h3>🏭 Production Impact</h3>
+                <div class="value">9.8%</div>
+                <div class="label">Based on 24 machine-shifts (includes NO STAFF)</div>
+            </div>
+        </div>
+        
+        <div class="charts-section">
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <h3>📊 All Machines OEE Performance (NO Consolidation)</h3>
+                    <div class="machine-chart-wrapper"><canvas id="oeeChart"></canvas></div>
+                </div>
+                <div class="chart-container">
+                    <h3>👥 All Operators by Average OEE (Target: 75%) - Case-Insensitive</h3>
+                    <div class="operator-chart-wrapper"><canvas id="operatorChart"></canvas></div>
+                </div>
+            </div>
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <h3>🎯 Overall OEE by Shift (Target: 75%)</h3>
+                    <div class="chart-wrapper"><canvas id="capacityOeeChart"></canvas></div>
+                </div>
+                <div class="chart-container">
+                    <h3>📈 Production Overview</h3>
+                    <div class="chart-wrapper"><canvas id="overviewChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+        <div class="downtime-section">
+            <div class="downtime-header">
+                <h2>⚡ Downtime Analytics Dashboard - ENHANCED MAINTENANCE DETECTION</h2>
+                <div class="subtitle">Column M Maintenance + Impact based on 24 actual machine-shifts × 480 min = 192.0h total capacity (includes NO STAFF) | 💬 Comments included</div>
+            </div>
+            
+            <div class="downtime-kpis">
+                <div class="downtime-kpi-card">
+                    <h4>Total Downtime</h4>
+                    <div class="kpi-value">1133</div>
+                    <div class="kpi-label">Minutes (No Duplication)</div>
+                </div>
+                <div class="downtime-kpi-card">
+                    <h4>Hours Lost</h4>
+                    <div class="kpi-value">18.9</div>
+                    <div class="kpi-label">Production Hours</div>
+                </div>
+                <div class="downtime-kpi-card">
+                    <h4>Production Impact</h4>
+                    <div class="kpi-value">9.8%</div>
+                    <div class="kpi-label">Actual Machine-Shifts (includes NO STAFF)</div>
+                </div>
+                <div class="downtime-kpi-card">
+                    <h4>Machine-Shift Breakdown</h4>
+                    <div class="kpi-value">24</div>
+                    <div class="kpi-label">S1:11 S2:8 S3:5 </div>
+                </div>
+                <div class="downtime-kpi-card">
+                    <h4>Machines Affected</h4>
+                    <div class="kpi-value">6</div>
+                    <div class="kpi-label">Total Machines</div>
+                </div>
+                <div class="downtime-kpi-card">
+                    <h4>Total Incidents</h4>
+                    <div class="kpi-value">14</div>
+                    <div class="kpi-label">Downtime Events</div>
+                </div>
+                <div class="downtime-kpi-card">
+                    <h4>Maintenance Downtime</h4>
+                    <div class="kpi-value">240</div>
+                    <div class="kpi-label">Column M Detected</div>
+                </div>
+                <div class="downtime-kpi-card">
+                    <h4>NO STAFF Machine-Shifts</h4>
+                    <div class="kpi-value">0</div>
+                    <div class="kpi-label">Unstaffed Operations</div>
+                </div>
+            </div>
+            
+            <div class="downtime-charts-grid">
+                <div class="chart-container">
+                    <h3>💫 Downtime by Category</h3>
+                    <div class="chart-wrapper"><canvas id="downtimeDistributionChart"></canvas></div>
+                </div>
+                <div class="chart-container">
+                    <h3>🎯 Severity Analysis</h3>
+                    <div class="chart-wrapper"><canvas id="downtimeSeverityChart"></canvas></div>
+                </div>
+            </div>
+            
+            <div class="downtime-charts-full">
+                <div class="chart-container">
+                    <h3>📈 Pareto Analysis - 80/20 Rule Implementation</h3>
+                    <div class="chart-wrapper"><canvas id="downtimeParetoChart"></canvas></div>
+                </div>
+            </div>
+            
+            <div class="downtime-charts-grid">
+                <div class="downtime-machines-list">
+                    <h3>🏆 Machine Downtime Rankings</h3>
+                    <div id="machineDowntimeList"></div>
+                </div>
+                <div class="downtime-breakdown">
+                    <h3>🔧 Machine-Specific Breakdown with Comments</h3>
+                    <select id="machineDowntimeSelector" class="machine-selector">
+                        <option value="">Select a machine for detailed breakdown...</option>
+                    </select>
+                    <div id="machineDowntimeBreakdown">
+                        <p style="text-align: center; color: rgba(255, 255, 255, 0.6); padding: 2rem;">
+                            Select a machine above to view detailed downtime breakdown by category and shift<br>
+                            💬 <strong>Enhanced:</strong> Includes maintenance from Column M + comments where available
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="downtime-charts-full">
+                <div class="downtime-breakdown">
+                    <h3>📅 Downtime by Category and Shift</h3>
+                    <div id="categoryShiftBreakdown">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px;">
+                            <div style="background: linear-gradient(135deg, #2d1b1b 0%, #1a1a1a 100%); padding: 20px; border-radius: 12px; border: 1px solid rgba(220, 38, 38, 0.3);">
+                                <h4 style="color: #dc2626; font-size: 1.1rem; margin-bottom: 15px; text-align: center;">Mechanical Setup</h4>
+                                <div style="text-align: center; margin-bottom: 15px;">
+                                    <div style="font-size: 1.8rem; font-weight: bold; color: #ffffff;">315 min</div>
+                                    <div style="font-size: 0.9rem; color: rgba(255,255,255,0.7);">(5.2 hours total)</div>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; margin-bottom: 6px; background: rgba(255, 255, 255, 0.05); border-radius: 6px;">
+                                    <span style="font-weight: 600; color: #ffffff;">Shift 1</span>
+                                    <div style="text-align: right;">
+                                        <div style="font-weight: 700; color: #dc2626;">90 min</div>
+                                        <div style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.6);">(28.6% • 1.5h)</div>
+                                    </div>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; margin-bottom: 6px; background: rgba(255, 255, 255, 0.05); border-radius: 6px;">
+                                    <span style="font-weight: 600; color: #ffffff;">Shift 2</span>
+                                    <div style="text-align: right;">
+                                        <div style="font-weight: 700; color: #dc2626;">225 min</div>
+                                        <div style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.6);">(71.4% • 3.8h)</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="background: linear-gradient(135deg, #2d1b1b 0%, #1a1a1a 100%); padding: 20px; border-radius: 12px; border: 1px solid rgba(220, 38, 38, 0.3);">
+                                <h4 style="color: #dc2626; font-size: 1.1rem; margin-bottom: 15px; text-align: center;">Quality Setup</h4>
+                                <div style="text-align: center; margin-bottom: 15px;">
+                                    <div style="font-size: 1.8rem; font-weight: bold; color: #ffffff;">175 min</div>
+                                    <div style="font-size: 0.9rem; color: rgba(255,255,255,0.7);">(2.9 hours total)</div>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; margin-bottom: 6px; background: rgba(255, 255, 255, 0.05); border-radius: 6px;">
+                                    <span style="font-weight: 600; color: #ffffff;">Shift 1</span>
+                                    <div style="text-align: right;">
+                                        <div style="font-weight: 700; color: #dc2626;">45 min</div>
+                                        <div style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.6);">(25.7% • 0.8h)</div>
+                                    </div>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; margin-bottom: 6px; background: rgba(255, 255, 255, 0.05); border-radius: 6px;">
+                                    <span style="font-weight: 600; color: #ffffff;">Shift 2</span>
+                                    <div style="text-align: right;">
+                                        <div style="font-weight: 700; color: #dc2626;">130 min</div>
+                                        <div style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.6);">(74.3% • 2.2h)</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="background: linear-gradient(135deg, #2d1b1b 0%, #1a1a1a 100%); padding: 20px; border-radius: 12px; border: 1px solid rgba(220, 38, 38, 0.3);">
+                                <h4 style="color: #dc2626; font-size: 1.1rem; margin-bottom: 15px; text-align: center;">Quality Flow</h4>
+                                <div style="text-align: center; margin-bottom: 15px;">
+                                    <div style="font-size: 1.8rem; font-weight: bold; color: #ffffff;">20 min</div>
+                                    <div style="font-size: 0.9rem; color: rgba(255,255,255,0.7);">(0.3 hours total)</div>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; margin-bottom: 6px; background: rgba(255, 255, 255, 0.05); border-radius: 6px;">
+                                    <span style="font-weight: 600; color: #ffffff;">Shift 2</span>
+                                    <div style="text-align: right;">
+                                        <div style="font-weight: 700; color: #dc2626;">20 min</div>
+                                        <div style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.6);">(100.0% • 0.3h)</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="background: linear-gradient(135deg, #2d1b1b 0%, #1a1a1a 100%); padding: 20px; border-radius: 12px; border: 1px solid rgba(220, 38, 38, 0.3);">
+                                <h4 style="color: #dc2626; font-size: 1.1rem; margin-bottom: 15px; text-align: center;">Quality Tooling</h4>
+                                <div style="text-align: center; margin-bottom: 15px;">
+                                    <div style="font-size: 1.8rem; font-weight: bold; color: #ffffff;">328 min</div>
+                                    <div style="font-size: 0.9rem; color: rgba(255,255,255,0.7);">(5.5 hours total)</div>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; margin-bottom: 6px; background: rgba(255, 255, 255, 0.05); border-radius: 6px;">
+                                    <span style="font-weight: 600; color: #ffffff;">Shift 1</span>
+                                    <div style="text-align: right;">
+                                        <div style="font-weight: 700; color: #dc2626;">218 min</div>
+                                        <div style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.6);">(66.5% • 3.6h)</div>
+                                    </div>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; margin-bottom: 6px; background: rgba(255, 255, 255, 0.05); border-radius: 6px;">
+                                    <span style="font-weight: 600; color: #ffffff;">Shift 2</span>
+                                    <div style="text-align: right;">
+                                        <div style="font-weight: 700; color: #dc2626;">20 min</div>
+                                        <div style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.6);">(6.1% • 0.3h)</div>
+                                    </div>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; margin-bottom: 6px; background: rgba(255, 255, 255, 0.05); border-radius: 6px;">
+                                    <span style="font-weight: 600; color: #ffffff;">Shift 3</span>
+                                    <div style="text-align: right;">
+                                        <div style="font-weight: 700; color: #dc2626;">90 min</div>
+                                        <div style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.6);">(27.4% • 1.5h)</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="background: linear-gradient(135deg, #2d1b1b 0%, #1a1a1a 100%); padding: 20px; border-radius: 12px; border: 1px solid rgba(220, 38, 38, 0.3);">
+                                <h4 style="color: #dc2626; font-size: 1.1rem; margin-bottom: 15px; text-align: center;">Maintenance</h4>
+                                <div style="text-align: center; margin-bottom: 15px;">
+                                    <div style="font-size: 1.8rem; font-weight: bold; color: #ffffff;">240 min</div>
+                                    <div style="font-size: 0.9rem; color: rgba(255,255,255,0.7);">(4.0 hours total)</div>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; margin-bottom: 6px; background: rgba(255, 255, 255, 0.05); border-radius: 6px;">
+                                    <span style="font-weight: 600; color: #ffffff;">Shift 1</span>
+                                    <div style="text-align: right;">
+                                        <div style="font-weight: 700; color: #dc2626;">240 min</div>
+                                        <div style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.6);">(100.0% • 4.0h)</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="background: linear-gradient(135deg, #2d1b1b 0%, #1a1a1a 100%); padding: 20px; border-radius: 12px; border: 1px solid rgba(220, 38, 38, 0.3);">
+                                <h4 style="color: #dc2626; font-size: 1.1rem; margin-bottom: 15px; text-align: center;">Tooling</h4>
+                                <div style="text-align: center; margin-bottom: 15px;">
+                                    <div style="font-size: 1.8rem; font-weight: bold; color: #ffffff;">30 min</div>
+                                    <div style="font-size: 0.9rem; color: rgba(255,255,255,0.7);">(0.5 hours total)</div>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; margin-bottom: 6px; background: rgba(255, 255, 255, 0.05); border-radius: 6px;">
+                                    <span style="font-weight: 600; color: #ffffff;">Shift 1</span>
+                                    <div style="text-align: right;">
+                                        <div style="font-weight: 700; color: #dc2626;">20 min</div>
+                                        <div style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.6);">(66.7% • 0.3h)</div>
+                                    </div>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; margin-bottom: 6px; background: rgba(255, 255, 255, 0.05); border-radius: 6px;">
+                                    <span style="font-weight: 600; color: #ffffff;">Shift 2</span>
+                                    <div style="text-align: right;">
+                                        <div style="font-weight: 700; color: #dc2626;">10 min</div>
+                                        <div style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.6);">(33.3% • 0.2h)</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="background: linear-gradient(135deg, #2d1b1b 0%, #1a1a1a 100%); padding: 20px; border-radius: 12px; border: 1px solid rgba(220, 38, 38, 0.3);">
+                                <h4 style="color: #dc2626; font-size: 1.1rem; margin-bottom: 15px; text-align: center;">Technology</h4>
+                                <div style="text-align: center; margin-bottom: 15px;">
+                                    <div style="font-size: 1.8rem; font-weight: bold; color: #ffffff;">25 min</div>
+                                    <div style="font-size: 0.9rem; color: rgba(255,255,255,0.7);">(0.4 hours total)</div>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; margin-bottom: 6px; background: rgba(255, 255, 255, 0.05); border-radius: 6px;">
+                                    <span style="font-weight: 600; color: #ffffff;">Shift 3</span>
+                                    <div style="text-align: right;">
+                                        <div style="font-weight: 700; color: #dc2626;">25 min</div>
+                                        <div style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.6);">(100.0% • 0.4h)</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="capacity-oee-section">
+            <div class="capacity-oee-header">
+                <h2>🎯 Overall OEE by Shift Analysis - Simple Average (NO STAFF = 0%)</h2>
+                <div class="alert-subtitle">Simple Average OEE per Shift (Target: 75%) | Machine OEE based on 480 minutes per shift | NO STAFF machines contribute 0% OEE and count in denominator</div>
+            </div>
+            <div class="capacity-details">
+                <div class="capacity-detail-card">
+                    <h4>Shift 1 Overall OEE</h4>
+                    <div style="text-align: center; margin: 15px 0;">
+                        <div style="font-size: 2.5rem; font-weight: bold; color: #dc2626;">
+                            53.8%
+                        </div>
+                        <div style="font-size: 0.9rem; color: rgba(255,255,255,0.7); margin-top: 5px;">
+                            Target: 75% | ⚠️ Below Target | Simple Average
+                        </div>
+                    </div>
+                    <div class="capacity-metrics">
+                        <div class="capacity-metric">
+                            <div class="label">Simple Avg OEE</div>
+                            <div class="value">53.8%</div>
+                        </div>
+                        <div class="capacity-metric">
+                            <div class="label">Total Machines</div>
+                            <div class="value">11</div>
+                        </div>
+                        <div class="capacity-metric">
+                            <div class="label">🚨 NO STAFF (0%)</div>
+                            <div class="value" style="color: #ff3b30;">0</div>
+                        </div>
+                        <div class="capacity-metric">
+                            <div class="label">vs Target</div>
+                            <div class="value" style="color: #dc2626;">-21.2%</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="capacity-detail-card">
+                    <h4>Shift 2 Overall OEE</h4>
+                    <div style="text-align: center; margin: 15px 0;">
+                        <div style="font-size: 2.5rem; font-weight: bold; color: #dc2626;">
+                            61.2%
+                        </div>
+                        <div style="font-size: 0.9rem; color: rgba(255,255,255,0.7); margin-top: 5px;">
+                            Target: 75% | ⚠️ Below Target | Simple Average
+                        </div>
+                    </div>
+                    <div class="capacity-metrics">
+                        <div class="capacity-metric">
+                            <div class="label">Simple Avg OEE</div>
+                            <div class="value">61.2%</div>
+                        </div>
+                        <div class="capacity-metric">
+                            <div class="label">Total Machines</div>
+                            <div class="value">8</div>
+                        </div>
+                        <div class="capacity-metric">
+                            <div class="label">🚨 NO STAFF (0%)</div>
+                            <div class="value" style="color: #ff3b30;">0</div>
+                        </div>
+                        <div class="capacity-metric">
+                            <div class="label">vs Target</div>
+                            <div class="value" style="color: #dc2626;">-13.8%</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="capacity-detail-card">
+                    <h4>Shift 3 Overall OEE</h4>
+                    <div style="text-align: center; margin: 15px 0;">
+                        <div style="font-size: 2.5rem; font-weight: bold; color: #059669;">
+                            75.0%
+                        </div>
+                        <div style="font-size: 0.9rem; color: rgba(255,255,255,0.7); margin-top: 5px;">
+                            Target: 75% | ✅ Above Target | Simple Average
+                        </div>
+                    </div>
+                    <div class="capacity-metrics">
+                        <div class="capacity-metric">
+                            <div class="label">Simple Avg OEE</div>
+                            <div class="value">75.0%</div>
+                        </div>
+                        <div class="capacity-metric">
+                            <div class="label">Total Machines</div>
+                            <div class="value">5</div>
+                        </div>
+                        <div class="capacity-metric">
+                            <div class="label">🚨 NO STAFF (0%)</div>
+                            <div class="value" style="color: #ff3b30;">0</div>
+                        </div>
+                        <div class="capacity-metric">
+                            <div class="label">vs Target</div>
+                            <div class="value" style="color: #059669;">+0.0%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="capacity-detail-card" style="grid-column: 1 / -1; text-align: center;">
+                <h4>🎯 MAIN OEE - Simple Average OEE Across All Shifts (NO STAFF properly included)</h4>
+                <div style="font-size: 3rem; font-weight: bold; color: #dc2626; margin: 20px 0;">
+                    63.3%
+                </div>
+                <div style="color: rgba(255, 255, 255, 0.7); font-size: 1.1rem;">
+                    Target: 75% | ⚠️ Below Target • This is the MAIN OEE KPI | NO STAFF machines contribute 0% and count in denominator
+                </div>
+            </div>
+        </div>
+        <div class="table-section">
+            <h2>📋 Detailed Production Report - NO CONSOLIDATION + CYCLE TIME + SETUP + NO STAFF</h2>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Machine</th>
+                            <th>Operation</th>
+                            <th>Item Name</th>
+                            <th>Internal Order</th>
+                            <th>OK Parts</th>
+                            <th>NOK Parts</th>
+                            <th>Quality %</th>
+                            <th>Cycle Time</th>
+                            <th>Setup</th>
+                            <th>OEE % (Target: 75%)</th>
+                            <th>Operator</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="">
+                            <td class="machine-name">106 - BNE 51MYY Miyano</td>
+                            <td>Op 20</td>
+                            <td>AU.KB2045-B-0208-DRE</td>
+                            <td><span class="internal-order-badge">254515</span></td>
+                            <td>175</td>
+                            <td>4</td>
+                            <td class="quality-good">
+                                <span class="status-indicator status-good"></span>
+                                97.8%
+                            </td>
+                            <td class="cycle-time-excellent">
+                                1.5s
+                            </td>
+                            <td class="setup-no">
+                                —
+                            </td>
+                            <td class="oee-poor oee-tooltip" data-tooltip="Avail: 95.8% | Perf: 58.4% | Qual: 97.8% | Parts: 179">
+                                54.7%
+                            </td>
+                            <td class="operator">Sumahar Liviu  (S1)</td>
+                        </tr>
+                        <tr class="">
+                            <td class="machine-name">106 - BNE 51MYY Miyano</td>
+                            <td>Op 20</td>
+                            <td>AU.KB2045-B-0208-DRE</td>
+                            <td><span class="internal-order-badge">254515</span></td>
+                            <td>244</td>
+                            <td>3</td>
+                            <td class="quality-excellent">
+                                <span class="status-indicator status-excellent"></span>
+                                98.8%
+                            </td>
+                            <td class="cycle-time-excellent">
+                                1.5s
+                            </td>
+                            <td class="setup-no">
+                                —
+                            </td>
+                            <td class="oee-excellent oee-tooltip" data-tooltip="Avail: 97.9% | Perf: 78.8% | Qual: 98.8% | Parts: 247">
+                                76.2%
+                            </td>
+                            <td class="operator">Iudian Mihai (S2)</td>
+                        </tr>
+                        <tr class="">
+                            <td class="machine-name">106 - BNE 51MYY Miyano</td>
+                            <td>Op 20</td>
+                            <td>AU.KB2045-B-0208-DRE</td>
+                            <td><span class="internal-order-badge">254515</span></td>
+                            <td>230</td>
+                            <td>1</td>
+                            <td class="quality-excellent">
+                                <span class="status-indicator status-excellent"></span>
+                                99.6%
+                            </td>
+                            <td class="cycle-time-excellent">
+                                1.5s
+                            </td>
+                            <td class="setup-no">
+                                —
+                            </td>
+                            <td class="oee-good oee-tooltip" data-tooltip="Avail: 100.0% | Perf: 72.2% | Qual: 99.6% | Parts: 231">
+                                71.9%
+                            </td>
+                            <td class="operator">Jalpure Nilesh (S3)</td>
+                        </tr>
+                        <tr class="">
+                            <td class="machine-name">108 - Nomura N32</td>
+                            <td>Op 20</td>
+                            <td>1535100044</td>
+                            <td><span class="internal-order-badge">254400</span></td>
+                            <td>30</td>
+                            <td>0</td>
+                            <td class="quality-excellent">
+                                <span class="status-indicator status-excellent"></span>
+                                100.0%
+                            </td>
+                            <td class="cycle-time-excellent">
+                                7.3s
+                            </td>
+                            <td class="setup-no">
+                                —
+                            </td>
+                            <td class="oee-poor oee-tooltip" data-tooltip="Avail: 100.0% | Perf: 45.8% | Qual: 100.0% | Parts: 30">
+                                45.8%
+                            </td>
+                            <td class="operator">Ratan Dan  (S1)</td>
+                        </tr>
+                        <tr class="">
+                            <td class="machine-name">109 - Miyano ABX 80</td>
+                            <td>Op 20</td>
+                            <td>AU.KB3068-B-0208-DRE</td>
+                            <td><span class="internal-order-badge">254513</span></td>
+                            <td>55</td>
+                            <td>1</td>
+                            <td class="quality-excellent">
+                                <span class="status-indicator status-excellent"></span>
+                                98.2%
+                            </td>
+                            <td class="cycle-time-excellent">
+                                2.1s
+                            </td>
+                            <td class="setup-no">
+                                —
+                            </td>
+                            <td class="oee-poor oee-tooltip" data-tooltip="Avail: 84.8% | Perf: 28.3% | Qual: 98.2% | Parts: 56">
+                                23.6%
+                            </td>
+                            <td class="operator">Kanakala Charan  (S1)</td>
+                        </tr>
+                        <tr class="">
+                            <td class="machine-name">109 - Miyano ABX 80</td>
+                            <td>Op 1900-01-20 00:00:00</td>
+                            <td>AU.KB3068-B-0208-DRE</td>
+                            <td><span class="internal-order-badge">254517</span></td>
+                            <td>104</td>
+                            <td>3</td>
+                            <td class="quality-good">
+                                <span class="status-indicator status-good"></span>
+                                97.2%
+                            </td>
+                            <td class="cycle-time-excellent">
+                                2.1s
+                            </td>
+                            <td class="setup-no">
+                                —
+                            </td>
+                            <td class="oee-poor oee-tooltip" data-tooltip="Avail: 84.8% | Perf: 54.2% | Qual: 97.2% | Parts: 107">
+                                44.6%
+                            </td>
+                            <td class="operator">Kanakala Charan  (S1)</td>
+                        </tr>
+                        <tr class="">
+                            <td class="machine-name">109 - Miyano ABX 80</td>
+                            <td>Op 20</td>
+                            <td>AU.KB3068-B-0208-DRE</td>
+                            <td><span class="internal-order-badge">254517</span></td>
+                            <td>180</td>
+                            <td>4</td>
+                            <td class="quality-good">
+                                <span class="status-indicator status-good"></span>
+                                97.8%
+                            </td>
+                            <td class="cycle-time-excellent">
+                                2.1s
+                            </td>
+                            <td class="setup-no">
+                                —
+                            </td>
+                            <td class="oee-excellent oee-tooltip" data-tooltip="Avail: 91.7% | Perf: 86.1% | Qual: 97.8% | Parts: 184">
+                                77.3%
+                            </td>
+                            <td class="operator">Toth Cristian  (S2)</td>
+                        </tr>
+                        <tr class="">
+                            <td class="machine-name">109 - Miyano ABX 80</td>
+                            <td>Op 20</td>
+                            <td>AU.KB3068-B-0208-DRE</td>
+                            <td><span class="internal-order-badge">254517</span></td>
+                            <td>195</td>
+                            <td>4</td>
+                            <td class="quality-excellent">
+                                <span class="status-indicator status-excellent"></span>
+                                98.0%
+                            </td>
+                            <td class="cycle-time-excellent">
+                                2.1s
+                            </td>
+                            <td class="setup-no">
+                                —
+                            </td>
+                            <td class="oee-excellent oee-tooltip" data-tooltip="Avail: 100.0% | Perf: 85.4% | Qual: 98.0% | Parts: 199">
+                                83.7%
+                            </td>
+                            <td class="operator">Jalpure Nilesh (S3)</td>
+                        </tr>
+                        <tr class="">
+                            <td class="machine-name">201 - VM740S Neway</td>
+                            <td>Op 30</td>
+                            <td>R900305232</td>
+                            <td><span class="internal-order-badge">254502</span></td>
+                            <td>35</td>
+                            <td>0</td>
+                            <td class="quality-excellent">
+                                <span class="status-indicator status-excellent"></span>
+                                100.0%
+                            </td>
+                            <td class="cycle-time-excellent">
+                                3.0s
+                            </td>
+                            <td class="setup-no">
+                                —
+                            </td>
+                            <td class="oee-poor oee-tooltip" data-tooltip="Avail: 100.0% | Perf: 21.9% | Qual: 100.0% | Parts: 35">
+                                21.9%
+                            </td>
+                            <td class="operator">Spaiuc Bogdan  (S1)</td>
+                        </tr>
+                        <tr class="">
+                            <td class="machine-name">201 - VM740S Neway</td>
+                            <td>Op 30</td>
+                            <td>F-320745-0321.APL.ACT</td>
+                            <td><span class="internal-order-badge">250617</span></td>
+                            <td>1</td>
+                            <td>1</td>
+                            <td class="quality-poor">
+                                <span class="status-indicator status-poor"></span>
+                                50.0%
+                            </td>
+                            <td class="cycle-time-excellent">
+                                17.5s
+                            </td>
+                            <td class="setup-yes">
+                                🔧 225min
+                            </td>
+                            <td class="oee-poor oee-tooltip" data-tooltip="Avail: 26.0% | Perf: 28.0% | Qual: 50.0% | Parts: 2">
+                                3.6%
+                            </td>
+                            <td class="operator">Mihut Dragos  (S2)</td>
+                        </tr>
+                        <tr class="">
+                            <td class="machine-name">204 - Hec 400</td>
+                            <td>Op 50</td>
+                            <td>TK.KWVE20-B-A-L-0038-WW1</td>
+                            <td><span class="internal-order-badge">254100</span></td>
+                            <td>36</td>
+                            <td>0</td>
+                            <td class="quality-excellent">
+                                <span class="status-indicator status-excellent"></span>
+                                100.0%
+                            </td>
+                            <td class="cycle-time-excellent">
+                                6.4s
+                            </td>
+                            <td class="setup-no">
+                                —
+                            </td>
+                            <td class="oee-poor oee-tooltip" data-tooltip="Avail: 100.0% | Perf: 47.8% | Qual: 100.0% | Parts: 36">
+                                47.8%
+                            </td>
+                            <td class="operator">Spaiuc Bogdan  (S1)</td>
+                        </tr>
+                        <tr class="">
+                            <td class="machine-name">204 - Hec 400</td>
+                            <td>Op 50</td>
+                            <td>TK.KWVE20-B-A-L-0038-WW1</td>
+                            <td><span class="internal-order-badge">254100</span></td>
+                            <td>36</td>
+                            <td>0</td>
+                            <td class="quality-excellent">
+                                <span class="status-indicator status-excellent"></span>
+                                100.0%
+                            </td>
+                            <td class="cycle-time-excellent">
+                                6.4s
+                            </td>
+                            <td class="setup-no">
+                                —
+                            </td>
+                            <td class="oee-poor oee-tooltip" data-tooltip="Avail: 100.0% | Perf: 47.8% | Qual: 100.0% | Parts: 36">
+                                47.8%
+                            </td>
+                            <td class="operator">Cutus Bogdan (S2)</td>
+                        </tr>
+                        <tr class="">
+                            <td class="machine-name">204 - Hec 400</td>
+                            <td>Op 50</td>
+                            <td>TK.KWVE20-B-A-L-0038-WW1</td>
+                            <td><span class="internal-order-badge">254100</span></td>
+                            <td>36</td>
+                            <td>0</td>
+                            <td class="quality-excellent">
+                                <span class="status-indicator status-excellent"></span>
+                                100.0%
+                            </td>
+                            <td class="cycle-time-excellent">
+                                6.4s
+                            </td>
+                            <td class="setup-no">
+                                —
+                            </td>
+                            <td class="oee-poor oee-tooltip" data-tooltip="Avail: 100.0% | Perf: 47.8% | Qual: 100.0% | Parts: 36">
+                                47.8%
+                            </td>
+                            <td class="operator">Mishal Ranjit  (S3)</td>
+                        </tr>
+                        <tr class="">
+                            <td class="machine-name">206 - BA 322 SW</td>
+                            <td>Op 50</td>
+                            <td>R901321450</td>
+                            <td><span class="internal-order-badge">254112</span></td>
+                            <td>27</td>
+                            <td>1</td>
+                            <td class="quality-good">
+                                <span class="status-indicator status-good"></span>
+                                96.4%
+                            </td>
+                            <td class="cycle-time-excellent">
+                                15.0s
+                            </td>
+                            <td class="setup-yes">
+                                🔧 90min
+                            </td>
+                            <td class="oee-excellent oee-tooltip" data-tooltip="Avail: 81.2% | Perf: 100.0% | Qual: 96.4% | Parts: 28">
+                                78.3%
+                            </td>
+                            <td class="operator">Besleaga Adrian (S1)</td>
+                        </tr>
+                        <tr class="">
+                            <td class="machine-name">206 - BA 322 SW</td>
+                            <td>Op 50</td>
+                            <td>R901321450</td>
+                            <td><span class="internal-order-badge">254112</span></td>
+                            <td>38</td>
+                            <td>0</td>
+                            <td class="quality-excellent">
+                                <span class="status-indicator status-excellent"></span>
+                                100.0%
+                            </td>
+                            <td class="cycle-time-excellent">
+                                15.0s
+                            </td>
+                            <td class="setup-no">
+                                —
+                            </td>
+                            <td class="oee-excellent oee-tooltip" data-tooltip="Avail: 100.0% | Perf: 100.0% | Qual: 100.0% | Parts: 38">
+                                100.0%
+                            </td>
+                            <td class="operator">Ilie Constantin  (S2)</td>
+                        </tr>
+                        <tr class="">
+                            <td class="machine-name">208 - YASDA PX30i</td>
+                            <td>Op 20</td>
+                            <td>F-320745-1901.DL.ACT15</td>
+                            <td><span class="internal-order-badge">254511</span></td>
+                            <td>6</td>
+                            <td>0</td>
+                            <td class="quality-excellent">
+                                <span class="status-indicator status-excellent"></span>
+                                100.0%
+                            </td>
+                            <td class="cycle-time-excellent">
+                                47.0s
+                            </td>
+                            <td class="setup-no">
+                                —
+                            </td>
+                            <td class="oee-poor oee-tooltip" data-tooltip="Avail: 100.0% | Perf: 58.8% | Qual: 100.0% | Parts: 6">
+                                58.8%
+                            </td>
+                            <td class="operator">Minea Dragos  (S1)</td>
+                        </tr>
+                        <tr class="">
+                            <td class="machine-name">208 - YASDA PX30i</td>
+                            <td>Op 20</td>
+                            <td>F-320745-1901.DL.ACT15</td>
+                            <td><span class="internal-order-badge">254511</span></td>
+                            <td>10</td>
+                            <td>0</td>
+                            <td class="quality-excellent">
+                                <span class="status-indicator status-excellent"></span>
+                                100.0%
+                            </td>
+                            <td class="cycle-time-excellent">
+                                47.0s
+                            </td>
+                            <td class="setup-no">
+                                —
+                            </td>
+                            <td class="oee-excellent oee-tooltip" data-tooltip="Avail: 100.0% | Perf: 97.9% | Qual: 100.0% | Parts: 10">
+                                97.9%
+                            </td>
+                            <td class="operator">Mihut Dragos  (S2)</td>
+                        </tr>
+                        <tr class="">
+                            <td class="machine-name">210 - SW MEXIC</td>
+                            <td>Op 50</td>
+                            <td>TK.KWVE15-B-A-ESC-0038-WW1</td>
+                            <td><span class="internal-order-badge">254415</span></td>
+                            <td>48</td>
+                            <td>0</td>
+                            <td class="quality-excellent">
+                                <span class="status-indicator status-excellent"></span>
+                                100.0%
+                            </td>
+                            <td class="cycle-time-excellent">
+                                4.4s
+                            </td>
+                            <td class="setup-no">
+                                —
+                            </td>
+                            <td class="oee-poor oee-tooltip" data-tooltip="Avail: 50.0% | Perf: 88.2% | Qual: 100.0% | Parts: 48">
+                                44.1%
+                            </td>
+                            <td class="operator">Ciuparu Ion (S1)</td>
+                        </tr>
+                        <tr class="">
+                            <td class="machine-name">210 - SW MEXIC</td>
+                            <td>Op 50</td>
+                            <td>TK.KWVE15-B-A-ESC-0038-WW1</td>
+                            <td><span class="internal-order-badge">254415</span></td>
+                            <td>87</td>
+                            <td>1</td>
+                            <td class="quality-excellent">
+                                <span class="status-indicator status-excellent"></span>
+                                98.9%
+                            </td>
+                            <td class="cycle-time-excellent">
+                                4.4s
+                            </td>
+                            <td class="setup-no">
+                                —
+                            </td>
+                            <td class="oee-excellent oee-tooltip" data-tooltip="Avail: 100.0% | Perf: 80.9% | Qual: 98.9% | Parts: 88">
+                                79.9%
+                            </td>
+                            <td class="operator">Tudosie Robert  (S2)</td>
+                        </tr>
+                        <tr class="">
+                            <td class="machine-name">210 - SW MEXIC</td>
+                            <td>Op 50</td>
+                            <td>TK.KWVE15-B-A-ESC-0038-WW1</td>
+                            <td><span class="internal-order-badge">254415</span></td>
+                            <td>108</td>
+                            <td>0</td>
+                            <td class="quality-excellent">
+                                <span class="status-indicator status-excellent"></span>
+                                100.0%
+                            </td>
+                            <td class="cycle-time-excellent">
+                                4.4s
+                            </td>
+                            <td class="setup-no">
+                                —
+                            </td>
+                            <td class="oee-excellent oee-tooltip" data-tooltip="Avail: 100.0% | Perf: 99.2% | Qual: 100.0% | Parts: 108">
+                                99.2%
+                            </td>
+                            <td class="operator">Prasad Sunil  (S3)</td>
+                        </tr>
+                        <tr class="">
+                            <td class="machine-name">211 - SW</td>
+                            <td>Op 50</td>
+                            <td>TK.KWVE30-B-A-S-0038-WW1</td>
+                            <td><span class="internal-order-badge">254317</span></td>
+                            <td>8</td>
+                            <td>4</td>
+                            <td class="quality-poor">
+                                <span class="status-indicator status-poor"></span>
+                                66.7%
+                            </td>
+                            <td class="cycle-time-excellent">
+                                4.5s
+                            </td>
+                            <td class="setup-no">
+                                —
+                            </td>
+                            <td class="oee-poor oee-tooltip" data-tooltip="Avail: 60.4% | Perf: 18.6% | Qual: 66.7% | Parts: 12">
+                                7.5%
+                            </td>
+                            <td class="operator">Ciuparu Ion (S1)</td>
+                        </tr>
+                        <tr class="">
+                            <td class="machine-name">211 - SW</td>
+                            <td>Op 50</td>
+                            <td>0</td>
+                            <td><span class="internal-order-badge">0</span></td>
+                            <td>4</td>
+                            <td>0</td>
+                            <td class="quality-excellent">
+                                <span class="status-indicator status-excellent"></span>
+                                100.0%
+                            </td>
+                            <td class="cycle-time-excellent">
+                                480.0s
+                            </td>
+                            <td class="setup-no">
+                                —
+                            </td>
+                            <td class="oee-poor oee-tooltip" data-tooltip="Avail: 60.4% | Perf: 100.0% | Qual: 100.0% | Parts: 4">
+                                60.4%
+                            </td>
+                            <td class="operator">Ciuparu Ion (S1)</td>
+                        </tr>
+                        <tr class="">
+                            <td class="machine-name">211 - SW</td>
+                            <td>Op 50</td>
+                            <td>TK.KWVE30-B-A-H-0038-WW1</td>
+                            <td><span class="internal-order-badge">254518</span></td>
+                            <td>8</td>
+                            <td>16</td>
+                            <td class="quality-poor">
+                                <span class="status-indicator status-poor"></span>
+                                33.3%
+                            </td>
+                            <td class="cycle-time-excellent">
+                                4.0s
+                            </td>
+                            <td class="setup-no">
+                                —
+                            </td>
+                            <td class="oee-poor oee-tooltip" data-tooltip="Avail: 100.0% | Perf: 20.0% | Qual: 33.3% | Parts: 24">
+                                6.7%
+                            </td>
+                            <td class="operator">Sirbu Gabriel  (S2)</td>
+                        </tr>
+                        <tr class="">
+                            <td class="machine-name">211 - SW</td>
+                            <td>Op 50</td>
+                            <td>TK.KWVE30-B-A-H-0038-WW1</td>
+                            <td><span class="internal-order-badge">254518</span></td>
+                            <td>87</td>
+                            <td>1</td>
+                            <td class="quality-excellent">
+                                <span class="status-indicator status-excellent"></span>
+                                98.9%
+                            </td>
+                            <td class="cycle-time-excellent">
+                                4.0s
+                            </td>
+                            <td class="setup-no">
+                                —
+                            </td>
+                            <td class="oee-good oee-tooltip" data-tooltip="Avail: 76.0% | Perf: 96.4% | Qual: 98.9% | Parts: 88">
+                                72.5%
+                            </td>
+                            <td class="operator">Cirstinescu Andrei  (S3)</td>
+                        </tr>
+                        <tr class="">
+                            <td class="machine-name">304 - GSU 30B Shigiya</td>
+                            <td>Op 70</td>
+                            <td>R900601678</td>
+                            <td><span class="internal-order-badge">254200</span></td>
+                            <td>42</td>
+                            <td>1</td>
+                            <td class="quality-good">
+                                <span class="status-indicator status-good"></span>
+                                97.7%
+                            </td>
+                            <td class="cycle-time-excellent">
+                                6.0s
+                            </td>
+                            <td class="setup-no">
+                                —
+                            </td>
+                            <td class="oee-poor oee-tooltip" data-tooltip="Avail: 100.0% | Perf: 53.8% | Qual: 97.7% | Parts: 43">
+                                52.5%
+                            </td>
+                            <td class="operator">Popa Andrei  (S1)</td>
+                        </tr>
+                        <tr class="">
+                            <td class="machine-name">306 - Kellenberger 100</td>
+                            <td>Op 20</td>
+                            <td>F-552668.01-0012</td>
+                            <td><span class="internal-order-badge">254504</span></td>
+                            <td>20</td>
+                            <td>0</td>
+                            <td class="quality-excellent">
+                                <span class="status-indicator status-excellent"></span>
+                                100.0%
+                            </td>
+                            <td class="cycle-time-excellent">
+                                17.8s
+                            </td>
+                            <td class="setup-no">
+                                —
+                            </td>
+                            <td class="oee-good oee-tooltip" data-tooltip="Avail: 100.0% | Perf: 74.2% | Qual: 100.0% | Parts: 20">
+                                74.2%
+                            </td>
+                            <td class="operator">Popa Andrei  (S1)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="footer">
+            Generated on 2025-11-10 11:04:09 | OLSTRAL Production Dashboard - NO CONSOLIDATION VERSION
+        </div>
+    </div>
+
+    <script>
+        // Register the datalabels plugin
+        Chart.register(ChartDataLabels);
+        
+        Chart.defaults.font.family = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+        Chart.defaults.font.size = 12;
+        Chart.defaults.color = '#ffffff';
+
+        // Production data - ALL machines and operators (no consolidation)
+        const oeeData = [{"machine": "206 - BA 322 SW", "availability": 92.0, "performance": 100.0, "quality": 98.5, "oee": 90.8, "has_no_staff": false}, {"machine": "208 - YASDA PX30i", "availability": 100.0, "performance": 83.2, "quality": 100.0, "oee": 83.2, "has_no_staff": false}, {"machine": "210 - SW MEXIC", "availability": 90.2, "performance": 90.4, "quality": 99.6, "oee": 81.4, "has_no_staff": false}, {"machine": "109 - Miyano ABX 80", "availability": 92.7, "performance": 84.8, "quality": 97.8, "oee": 76.9, "has_no_staff": false}, {"machine": "306 - Kellenberger 100", "availability": 100.0, "performance": 74.2, "quality": 100.0, "oee": 74.2, "has_no_staff": false}, {"machine": "106 - BNE 51MYY Miyano", "availability": 98.1, "performance": 70.9, "quality": 98.8, "oee": 68.8, "has_no_staff": false}, {"machine": "211 - SW", "availability": 78.6, "performance": 82.5, "quality": 83.6, "oee": 56.8, "has_no_staff": false}, {"machine": "304 - GSU 30B Shigiya", "availability": 100.0, "performance": 53.8, "quality": 97.7, "oee": 52.5, "has_no_staff": false}, {"machine": "204 - Hec 400", "availability": 100.0, "performance": 47.8, "quality": 100.0, "oee": 47.8, "has_no_staff": false}, {"machine": "108 - Nomura N32", "availability": 100.0, "performance": 45.8, "quality": 100.0, "oee": 45.8, "has_no_staff": false}, {"machine": "201 - VM740S Neway", "availability": 96.0, "performance": 22.2, "quality": 97.3, "oee": 20.9, "has_no_staff": false}];
+        const operatorData = [{"name": "Ilie Constantin\u00a0", "normalized_name": "ILIE CONSTANTIN", "quality": 100.0, "oee": 100.0, "total_parts": 38, "operations": 1, "shifts_worked": 1, "machines_operated": 1, "has_oee_data": true, "oee_count": 1}, {"name": "Prasad Sunil\u00a0", "normalized_name": "PRASAD SUNIL", "quality": 100.0, "oee": 99.2, "total_parts": 108, "operations": 1, "shifts_worked": 1, "machines_operated": 1, "has_oee_data": true, "oee_count": 1}, {"name": "Tudosie Robert\u00a0", "normalized_name": "TUDOSIE ROBERT", "quality": 98.9, "oee": 79.9, "total_parts": 88, "operations": 1, "shifts_worked": 1, "machines_operated": 1, "has_oee_data": true, "oee_count": 1}, {"name": "Besleaga Adrian", "normalized_name": "BESLEAGA ADRIAN", "quality": 96.4, "oee": 78.3, "total_parts": 28, "operations": 1, "shifts_worked": 1, "machines_operated": 1, "has_oee_data": true, "oee_count": 1}, {"name": "Jalpure Nilesh", "normalized_name": "JALPURE NILESH", "quality": 98.8, "oee": 77.8, "total_parts": 430, "operations": 2, "shifts_worked": 1, "machines_operated": 2, "has_oee_data": true, "oee_count": 2}, {"name": "Toth Cristian\u00a0", "normalized_name": "TOTH CRISTIAN", "quality": 97.8, "oee": 77.3, "total_parts": 184, "operations": 1, "shifts_worked": 1, "machines_operated": 1, "has_oee_data": true, "oee_count": 1}, {"name": "Iudian Mihai", "normalized_name": "IUDIAN MIHAI", "quality": 98.8, "oee": 76.2, "total_parts": 247, "operations": 1, "shifts_worked": 1, "machines_operated": 1, "has_oee_data": true, "oee_count": 1}, {"name": "Cirstinescu Andrei\u00a0", "normalized_name": "CIRSTINESCU ANDREI", "quality": 98.9, "oee": 72.5, "total_parts": 88, "operations": 1, "shifts_worked": 1, "machines_operated": 1, "has_oee_data": true, "oee_count": 1}, {"name": "Popa Andrei\u00a0", "normalized_name": "POPA ANDREI", "quality": 98.4, "oee": 63.4, "total_parts": 63, "operations": 2, "shifts_worked": 1, "machines_operated": 2, "has_oee_data": true, "oee_count": 2}, {"name": "Minea Dragos\u00a0", "normalized_name": "MINEA DRAGOS", "quality": 100.0, "oee": 58.8, "total_parts": 6, "operations": 1, "shifts_worked": 1, "machines_operated": 1, "has_oee_data": true, "oee_count": 1}, {"name": "Sumahar Liviu\u00a0", "normalized_name": "SUMAHAR LIVIU", "quality": 97.8, "oee": 54.7, "total_parts": 179, "operations": 1, "shifts_worked": 1, "machines_operated": 1, "has_oee_data": true, "oee_count": 1}, {"name": "Mihut Dragos\u00a0", "normalized_name": "MIHUT DRAGOS", "quality": 91.7, "oee": 50.8, "total_parts": 12, "operations": 2, "shifts_worked": 1, "machines_operated": 2, "has_oee_data": true, "oee_count": 2}, {"name": "Cutus Bogdan", "normalized_name": "CUTUS BOGDAN", "quality": 100.0, "oee": 47.8, "total_parts": 36, "operations": 1, "shifts_worked": 1, "machines_operated": 1, "has_oee_data": true, "oee_count": 1}, {"name": "Mishal Ranjit\u00a0", "normalized_name": "MISHAL RANJIT", "quality": 100.0, "oee": 47.8, "total_parts": 36, "operations": 1, "shifts_worked": 1, "machines_operated": 1, "has_oee_data": true, "oee_count": 1}, {"name": "Ratan Dan\u00a0", "normalized_name": "RATAN DAN", "quality": 100.0, "oee": 45.8, "total_parts": 30, "operations": 1, "shifts_worked": 1, "machines_operated": 1, "has_oee_data": true, "oee_count": 1}, {"name": "Ciuparu Ion", "normalized_name": "CIUPARU ION", "quality": 93.8, "oee": 37.3, "total_parts": 64, "operations": 3, "shifts_worked": 1, "machines_operated": 2, "has_oee_data": true, "oee_count": 3}, {"name": "Spaiuc Bogdan\u00a0", "normalized_name": "SPAIUC BOGDAN", "quality": 100.0, "oee": 34.8, "total_parts": 71, "operations": 2, "shifts_worked": 1, "machines_operated": 2, "has_oee_data": true, "oee_count": 2}, {"name": "Kanakala Charan\u00a0", "normalized_name": "KANAKALA CHARAN", "quality": 97.5, "oee": 34.1, "total_parts": 163, "operations": 2, "shifts_worked": 1, "machines_operated": 1, "has_oee_data": true, "oee_count": 2}, {"name": "Sirbu Gabriel\u00a0", "normalized_name": "SIRBU GABRIEL", "quality": 33.3, "oee": 6.7, "total_parts": 24, "operations": 1, "shifts_worked": 1, "machines_operated": 1, "has_oee_data": true, "oee_count": 1}];
+        const capacityOeeData = [{"shift": "Shift 1", "overall_oee": 53.8, "machine_count": 11, "no_staff_count": 0}, {"shift": "Shift 2", "overall_oee": 61.2, "machine_count": 8, "no_staff_count": 0}, {"shift": "Shift 3", "overall_oee": 75.0, "machine_count": 5, "no_staff_count": 0}];
+        
+        // Downtime data - PRESERVE ALL FUNCTIONALITY
+        const downtimeCategories = {"Mechanical Setup": 315.0, "Quality Setup": 175.0, "Quality Flow": 20.0, "Quality Tooling": 328.0, "Maintenance": 240.0, "Tooling": 30.0, "Technology": 25.0};
+        const downtimeMachines = {"201 - VM740S Neway": 355.0, "211 - SW": 305.0, "210 - SW MEXIC": 240.0, "109 - Miyano ABX 80": 113.0, "206 - BA 322 SW": 90.0, "106 - BNE 51MYY Miyano": 30.0};
+        const downtimeBreakdowns = {"106 - BNE 51MYY Miyano": {"Tooling": 30.0}, "109 - Miyano ABX 80": {"Quality Setup": 45.0, "Quality Tooling": 48.0, "Quality Flow": 20.0}, "201 - VM740S Neway": {"Mechanical Setup": 225.0, "Quality Setup": 130.0}, "206 - BA 322 SW": {"Mechanical Setup": 90.0}, "210 - SW MEXIC": {"Maintenance": 240.0}, "211 - SW": {"Quality Tooling": 280.0, "Technology": 25.0}};
+        const downtimeShiftAnalysis = {"Shift 1": 613.0, "Shift 2": 405.0, "Shift 3": 115.0};
+        const downtimeMachineShiftDetails = {"106 - BNE 51MYY Miyano": {"Shift 1": {"total": 20.0, "breakdown": {"Tooling": 20.0}, "comments": {}}, "Shift 2": {"total": 10.0, "breakdown": {"Tooling": 10.0}, "comments": {}}}, "109 - Miyano ABX 80": {"Shift 1": {"total": 73.0, "breakdown": {"Quality Setup": 45.0, "Quality Tooling": 28.0}, "comments": {"Quality Setup": [{"comment": "18 SP2 CLEAN", "downtime": 15.0, "operation": "1900-01-20 00:00:00", "operator": "Kanakala Charan\u00a0", "item": "AU.KB3068-B-0208-DRE"}]}}, "Shift 2": {"total": 40.0, "breakdown": {"Quality Flow": 20.0, "Quality Tooling": 20.0}, "comments": {}}}, "201 - VM740S Neway": {"Shift 2": {"total": 355.0, "breakdown": {"Mechanical Setup": 225.0, "Quality Setup": 130.0}, "comments": {"Mechanical Setup": [{"comment": "/+ Cautat si masurat scule", "downtime": 225.0, "operation": "30", "operator": "Mihut Dragos\u00a0", "item": "F-320745-0321.APL.ACT"}], "Quality Setup": [{"comment": "/+ Cautat si masurat scule", "downtime": 130.0, "operation": "30", "operator": "Mihut Dragos\u00a0", "item": "F-320745-0321.APL.ACT"}]}}}, "206 - BA 322 SW": {"Shift 1": {"total": 90.0, "breakdown": {"Mechanical Setup": 90.0}, "comments": {"Mechanical Setup": [{"comment": "Defect magazia de scule 90 minute,rupt tarod plus reglaj 60 de minute", "downtime": 90.0, "operation": "50", "operator": "Besleaga Adrian", "item": "R901321450"}]}}}, "210 - SW MEXIC": {"Shift 1": {"total": 240.0, "breakdown": {"Maintenance": 240.0}, "comments": {"Maintenance": [{"comment": "20MIN ERORI REPETETE", "downtime": 240.0, "operation": "50", "operator": "Ciuparu Ion", "item": "TK.KWVE15-B-A-ESC-0038-WW1"}]}}}, "211 - SW": {"Shift 1": {"total": 190.0, "breakdown": {"Quality Tooling": 190.0}, "comments": {}}, "Shift 3": {"total": 115.0, "breakdown": {"Quality Tooling": 90.0, "Technology": 25.0}, "comments": {"Quality Tooling": [{"comment": "indexat placute T1, verificat T26 S2> iesit din holder, schimbat holder T26 S2 90', reset masina> problema usa de incarcare", "downtime": 90.0, "operation": "50", "operator": "Cirstinescu Andrei\u00a0", "item": "TK.KWVE30-B-A-H-0038-WW1"}], "Technology": [{"comment": "indexat placute T1, verificat T26 S2> iesit din holder, schimbat holder T26 S2 90', reset masina> problema usa de incarcare", "downtime": 25.0, "operation": "50", "operator": "Cirstinescu Andrei\u00a0", "item": "TK.KWVE30-B-A-H-0038-WW1"}]}}}};  // NOW INCLUDES COMMENTS
+
+        // Professional Color Palette
+        const colors = {
+            primary: ['#DC2626', '#EF4444', '#F87171', '#FCA5A5'],
+            extended: ['#DC2626', '#EF4444', '#F87171', '#FCA5A5', '#FBBF24', '#FDE68A', '#A78BFA', '#C7D2FE', '#10B981', '#34D399', '#60A5FA', '#93C5FD'],
+            severity: {
+                critical: '#DC2626',
+                high: '#F59E0B', 
+                medium: '#FCD34D',
+                low: '#10B981'
+            },
+            targets: {
+                oee: 75  // 75% target across the board
+            },
+            noStaff: '#ff3b30'  // NO STAFF color
+        };
+
+        // Enhanced data label configuration for 75% target
+        const dataLabelConfig = {
+            display: true,
+            color: '#ffffff',
+            font: {
+                weight: 'bold',
+                size: 11
+            },
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            borderColor: '#ffffff',
+            borderWidth: 1,
+            borderRadius: 4,
+            padding: 4,
+            formatter: (value, context) => {
+                if (value === 0) return '';
+                return value + '%';
+            }
+        };
+
+        // Target line plugin
+        const targetLinePlugin = {
+            id: 'targetLine',
+            afterDraw: (chart, args, options) => {
+                const { ctx, chartArea: { top, bottom, left, right }, scales: { y } } = chart;
+                
+                if (options.target !== undefined) {
+                    const targetY = y.getPixelForValue(options.target);
+                    
+                    ctx.save();
+                    ctx.strokeStyle = options.color || '#ff6b35';
+                    ctx.lineWidth = options.lineWidth || 3;
+                    ctx.setLineDash(options.lineDash || [10, 5]);
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(left, targetY);
+                    ctx.lineTo(right, targetY);
+                    ctx.stroke();
+                    
+                    // Add target label
+                    if (options.label) {
+                        ctx.fillStyle = options.color || '#ff6b35';
+                        ctx.font = options.font || 'bold 12px Segoe UI';
+                        ctx.textAlign = 'right';
+                        ctx.fillText(options.label, right - 10, targetY - 8);
+                    }
+                    
+                    ctx.restore();
+                }
+            }
+        };
+
+        // Register the target line plugin
+        Chart.register(targetLinePlugin);
+
+        // Initialize all charts with 75% target focus and NO STAFF highlighting - PRESERVE ALL FUNCTIONALITY
+        function initializeCharts() {
+            createOEEChart();
+            createOperatorChart();
+            createCapacityOEEChart();
+            createOverviewChart();
+            
+            // Downtime charts - PRESERVE ALL FUNCTIONALITY
+            createDowntimeDistributionChart();
+            createDowntimeSeverityChart();
+            createDowntimeParetoChart();
+            
+            // Populate downtime lists and selectors - PRESERVE ALL FUNCTIONALITY
+            populateMachineDowntimeList();
+            populateMachineDowntimeSelector();
+        }
+
+        // Enhanced production charts - ALL MACHINES NOW (with NO STAFF highlighting, no consolidation)
+        function createOEEChart() {
+            const ctx = document.getElementById('oeeChart').getContext('2d');
+            
+            // Calculate dynamic height based on number of machines
+            const chartHeight = Math.max(400, oeeData.length * 25);
+            ctx.canvas.height = chartHeight;
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: oeeData.map(m => m.machine.length > 20 ? m.machine.substring(0, 20) + '...' : m.machine),
+                    datasets: [{
+                        label: 'OEE (%)',
+                        data: oeeData.map(m => m.oee),
+                        backgroundColor: oeeData.map(m => {
+                            if (m.has_no_staff) return colors.noStaff;  // Highlight NO STAFF machines
+                            return m.oee >= 75 ? '#10b981' : m.oee >= 65 ? '#f59e0b' : '#ef4444';
+                        }),
+                        borderRadius: 8,
+                        datalabels: dataLabelConfig
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: { display: false },
+                        datalabels: {
+                            ...dataLabelConfig,
+                            anchor: 'end',
+                            align: 'start'
+                        },
+                        targetLine: {
+                            target: 75,
+                            color: '#ff6b35',
+                            lineWidth: 3,
+                            lineDash: [8, 4],
+                            label: 'Target: 75%',
+                            font: 'bold 12px Segoe UI'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                afterLabel: function(context) {
+                                    const machine = oeeData[context.dataIndex];
+                                    let tooltip = [`Quality: ${machine.quality}%`];
+                                    if (machine.has_no_staff) {
+                                        tooltip.push('🚨 HAS NO STAFF SHIFTS');
+                                    }
+                                    tooltip.push('NO CONSOLIDATION - Direct data');
+                                    return tooltip;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { 
+                            beginAtZero: true, 
+                            max: 100, 
+                            ticks: { 
+                                callback: v => v + '%', 
+                                color: '#ffffff' 
+                            }, 
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' } 
+                        },
+                        y: { 
+                            ticks: { 
+                                color: '#ffffff' 
+                            }, 
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' } 
+                        }
+                    }
+                }
+            });
+        }
+
+        // OPERATOR CHART - Case-insensitive (no consolidation)
+        function createOperatorChart() {
+            const ctx = document.getElementById('operatorChart').getContext('2d');
+            
+            // Calculate dynamic height based on number of operators
+            const chartHeight = Math.max(400, operatorData.length * 25);
+            ctx.canvas.height = chartHeight;
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: operatorData.map(o => o.name.split(' ')[0]),
+                    datasets: [{
+                        label: 'Average OEE (%)',
+                        data: operatorData.map(o => o.oee),
+                        backgroundColor: operatorData.map(o => o.oee >= 75 ? '#10b981' : o.oee >= 65 ? '#f59e0b' : o.oee > 0 ? '#ef4444' : '#6b7280'),
+                        borderRadius: 6,
+                        datalabels: {
+                            ...dataLabelConfig,
+                            anchor: 'end',
+                            align: 'start',
+                            formatter: (value) => value > 0 ? value + '%' : ''
+                        }
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: { display: false },
+                        targetLine: {
+                            target: 75,
+                            color: '#ff6b35',
+                            lineWidth: 3,
+                            lineDash: [8, 4],
+                            label: 'Target: 75%',
+                            font: 'bold 12px Segoe UI'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                afterLabel: function(context) {
+                                    const operator = operatorData[context.dataIndex];
+                                    return [
+                                        `Quality: ${operator.quality}%`,
+                                        `Total Parts: ${operator.total_parts.toLocaleString()}`,
+                                        `Operations: ${operator.operations}`,
+                                        `Shifts Worked: ${operator.shifts_worked}`,
+                                        `Machines: ${operator.machines_operated}`,
+                                        `OEE Values Averaged: ${operator.oee_count}`,
+                                        `Has OEE Data: ${operator.has_oee_data ? 'Yes' : 'No'}`,
+                                        `Calculation: Average of ${operator.oee_count} OEE values`,
+                                        `Case-insensitive (TODOSI = todosi)`,
+                                        `Note: NO STAFF operators excluded`,
+                                        `NO CONSOLIDATION - Direct data`
+                                    ];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { 
+                            beginAtZero: true, 
+                            max: 100, 
+                            ticks: { 
+                                callback: v => v + '%', 
+                                color: '#ffffff' 
+                            }, 
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' } 
+                        },
+                        y: { 
+                            ticks: { color: '#ffffff' }, 
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' } 
+                        }
+                    }
+                }
+            });
+        }
+
+        function createCapacityOEEChart() {
+            const ctx = document.getElementById('capacityOeeChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: capacityOeeData.map(s => s.shift),
+                    datasets: [{
+                        label: 'Simple Average OEE (%)',
+                        data: capacityOeeData.map(s => s.overall_oee),
+                        backgroundColor: capacityOeeData.map(s => s.overall_oee >= 75 ? '#10b981' : s.overall_oee >= 65 ? '#f59e0b' : '#ef4444'),
+                        borderRadius: 8,
+                        datalabels: {
+                            ...dataLabelConfig,
+                            anchor: 'end',
+                            align: 'top',
+                            formatter: (value) => value.toFixed(1) + '%'
+                        }
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                afterLabel: function(context) {
+                                    const item = capacityOeeData[context.dataIndex];
+                                    return [
+                                        `Total Machines: ${item.machine_count}`,
+                                        `🚨 NO STAFF Machines: ${item.no_staff_count}`,
+                                        `Simple Average (NO STAFF = 0% in denominator)`,
+                                        `Calculation: Sum of all OEEs / Total machines`,
+                                        `NO CONSOLIDATION - Direct data`
+                                    ];
+                                }
+                            }
+                        },
+                        targetLine: {
+                            target: 75,
+                            color: '#ff6b35',
+                            lineWidth: 3,
+                            lineDash: [8, 4],
+                            label: 'Target: 75%',
+                            font: 'bold 12px Segoe UI'
+                        }
+                    },
+                    scales: {
+                        y: { 
+                            beginAtZero: true, 
+                            max: 100,
+                            ticks: { 
+                                callback: v => v + '%', 
+                                color: '#ffffff' 
+                            }, 
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' } 
+                        },
+                        x: { 
+                            ticks: { color: '#ffffff' }, 
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' } 
+                        }
+                    }
+                }
+            });
+        }
+
+        function createOverviewChart() {
+            const ctx = document.getElementById('overviewChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['OK Parts', 'NOK Parts'],
+                    datasets: [{ 
+                        data: [1850, 45], 
+                        backgroundColor: ['#10b981', '#ef4444'], 
+                        borderWidth: 2, 
+                        borderColor: '#2d1b1b', 
+                        cutout: '60%',
+                        datalabels: {
+                            display: true,
+                            color: '#ffffff',
+                            font: {
+                                weight: 'bold',
+                                size: 14
+                            },
+                            formatter: (value, context) => {
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return value.toLocaleString() + '\n(' + percentage + '%)';
+                            }
+                        }
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { 
+                            position: 'bottom', 
+                            labels: { 
+                                padding: 20, 
+                                usePointStyle: true, 
+                                color: '#ffffff', 
+                                font: { size: 14 } 
+                            } 
+                        }
+                    }
+                }
+            });
+        }
+
+        // Enhanced downtime charts with MAINTENANCE from Column M highlighted - PRESERVE ALL FUNCTIONALITY
+        function createDowntimeDistributionChart() {
+            const ctx = document.getElementById('downtimeDistributionChart');
+            if (!ctx) return;
+
+            const labels = Object.keys(downtimeCategories);
+            const data = Object.values(downtimeCategories);
+
+            if (labels.length === 0) {
+                ctx.parentElement.innerHTML = '<div style="color: rgba(255,255,255,0.7); text-align: center; padding: 2rem;">No downtime category data available</div>';
+                return;
+            }
+
+            // Highlight maintenance data
+            const maintenanceIndex = labels.indexOf('Maintenance');
+            const backgroundColors = colors.extended.slice(0, labels.length);
+            if (maintenanceIndex >= 0) {
+                backgroundColors[maintenanceIndex] = '#FF6B35'; // Highlight maintenance in orange
+            }
+
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: backgroundColors,
+                        borderWidth: 4,
+                        borderColor: '#2d1b1b',
+                        hoverBorderWidth: 6,
+                        datalabels: {
+                            display: true,
+                            color: '#ffffff',
+                            font: {
+                                weight: 'bold',
+                                size: 12
+                            },
+                            formatter: (value, context) => {
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return percentage + '%\n' + value + 'min';
+                            }
+                        }
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true,
+                                font: { size: 12, weight: '600' },
+                                color: '#ffffff'
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.raw;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
+                                    let labelText = `${label}: ${value} min (${percentage}%)`;
+                                    if (label === 'Maintenance') {
+                                        labelText += ' - FROM COLUMN M';
+                                    }
+                                    return labelText;
+                                }
+                            }
+                        }
+                    },
+                    cutout: '60%',
+                    animation: {
+                        animateRotate: true,
+                        duration: 2000
+                    }
+                }
+            });
+        }
+
+        function createDowntimeSeverityChart() {
+            const ctx = document.getElementById('downtimeSeverityChart');
+            if (!ctx) return;
+
+            const labels = Object.keys(downtimeCategories);
+            const values = Object.values(downtimeCategories);
+
+            if (labels.length === 0) {
+                ctx.parentElement.innerHTML = '<div style="color: rgba(255,255,255,0.7); text-align: center; padding: 2rem;">No severity data available</div>';
+                return;
+            }
+
+            const severityColors = values.map((value, index) => {
+                const label = labels[index];
+                if (label === 'Maintenance') return '#FF6B35'; // Highlight maintenance
+                if (value > 400) return colors.severity.critical;
+                if (value > 200) return colors.severity.high;
+                if (value > 100) return colors.severity.medium;
+                return colors.severity.low;
+            });
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Downtime (minutes)',
+                        data: values,
+                        backgroundColor: severityColors,
+                        borderRadius: 8,
+                        borderSkipped: false,
+                        datalabels: {
+                            display: true,
+                            color: '#ffffff',
+                            font: {
+                                weight: 'bold',
+                                size: 11
+                            },
+                            anchor: 'end',
+                            align: 'top',
+                            formatter: (value) => value > 0 ? value + 'min' : ''
+                        }
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.raw;
+                                    const hours = (value / 60).toFixed(1);
+                                    const label = context.label;
+                                    let severity = value > 400 ? 'CRITICAL' : value > 200 ? 'HIGH' : value > 100 ? 'MEDIUM' : 'LOW';
+                                    let labelText = `${label}: ${value} min (${hours}h) - ${severity}`;
+                                    if (label === 'Maintenance') {
+                                        labelText += ' - FROM COLUMN M';
+                                    }
+                                    return labelText;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: value => value + ' min',
+                                color: '#ffffff'
+                            },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        },
+                        x: {
+                            ticks: {
+                                maxRotation: 45,
+                                color: '#ffffff'
+                            },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        }
+                    },
+                    animation: {
+                        duration: 2000
+                    }
+                }
+            });
+        }
+
+        function createDowntimeParetoChart() {
+            const ctx = document.getElementById('downtimeParetoChart');
+            if (!ctx) return;
+
+            if (Object.keys(downtimeCategories).length === 0) {
+                ctx.parentElement.innerHTML = '<div style="color: rgba(255,255,255,0.7); text-align: center; padding: 2rem;">No data available for Pareto analysis</div>';
+                return;
+            }
+
+            const sortedEntries = Object.entries(downtimeCategories).sort((a, b) => b[1] - a[1]);
+            const labels = sortedEntries.map(entry => entry[0]);
+            const values = sortedEntries.map(entry => entry[1]);
+            
+            const total = values.reduce((sum, value) => sum + value, 0);
+            if (total === 0) {
+                ctx.parentElement.innerHTML = '<div style="color: rgba(255,255,255,0.7); text-align: center; padding: 2rem;">No valid data for Pareto analysis</div>';
+                return;
+            }
+
+            let cumulative = 0;
+            const cumulativePercentages = values.map(value => {
+                cumulative += value;
+                return (cumulative / total) * 100;
+            });
+
+            // Highlight maintenance bar
+            const barColors = values.map((_, index) => {
+                return labels[index] === 'Maintenance' ? '#FF6B35' : '#DC2626';
+            });
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        type: 'bar',
+                        label: 'Downtime (minutes)',
+                        data: values,
+                        backgroundColor: barColors,
+                        borderRadius: 8,
+                        yAxisID: 'y',
+                        datalabels: {
+                            display: true,
+                            color: '#ffffff',
+                            font: {
+                                weight: 'bold',
+                                size: 11
+                            },
+                            anchor: 'end',
+                            align: 'top',
+                            formatter: (value) => value + 'min'
+                        }
+                    }, {
+                        type: 'line',
+                        label: 'Cumulative %',
+                        data: cumulativePercentages,
+                        borderColor: '#FFFFFF',
+                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                        borderWidth: 4,
+                        pointBackgroundColor: '#DC2626',
+                        pointBorderColor: '#FFFFFF',
+                        pointBorderWidth: 3,
+                        pointRadius: 8,
+                        tension: 0.4,
+                        yAxisID: 'y1',
+                        datalabels: {
+                            display: true,
+                            color: '#ffffff',
+                            font: {
+                                weight: 'bold',
+                                size: 10
+                            },
+                            anchor: 'end',
+                            align: 'top',
+                            offset: 10,
+                            formatter: (value) => value.toFixed(1) + '%'
+                        }
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                font: { size: 14, weight: '600' },
+                                padding: 25,
+                                color: '#ffffff'
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                afterLabel: function(context) {
+                                    if (context.datasetIndex === 0 && context.label === 'Maintenance') {
+                                        return 'Source: Column M (Enhanced Detection)';
+                                    }
+                                    return null;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                maxRotation: 45,
+                                font: { weight: '600' },
+                                color: '#ffffff'
+                            },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Downtime (minutes)',
+                                color: '#DC2626',
+                                font: { weight: 'bold', size: 14 }
+                            },
+                            ticks: { color: '#ffffff' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            min: 0,
+                            max: 110,
+                            title: {
+                                display: true,
+                                text: 'Cumulative %',
+                                color: '#FFFFFF',
+                                font: { weight: 'bold', size: 14 }
+                            },
+                            ticks: {
+                                callback: value => value + '%',
+                                color: '#ffffff'
+                            },
+                            grid: { drawOnChartArea: false }
+                        }
+                    },
+                    animation: {
+                        duration: 2500
+                    }
+                }
+            });
+        }
+
+        function populateMachineDowntimeList() {
+            const container = document.getElementById('machineDowntimeList');
+            if (!container) return;
+
+            if (Object.keys(downtimeMachines).length === 0) {
+                container.innerHTML = '<div style="color: rgba(255,255,255,0.7); text-align: center; padding: 2rem;">No machine downtime data available</div>';
+                return;
+            }
+
+            const sortedMachines = Object.entries(downtimeMachines).sort((a, b) => b[1] - a[1]);
+            
+            container.innerHTML = '';
+            sortedMachines.forEach(([name, downtime], index) => {
+                const hours = (downtime / 60).toFixed(1);
+                const item = document.createElement('div');
+                item.className = 'machine-downtime-item';
+                
+                let severityColor = colors.severity.low;
+                if (downtime > 300) severityColor = colors.severity.critical;
+                else if (downtime > 200) severityColor = colors.severity.high;
+                else if (downtime > 100) severityColor = colors.severity.medium;
+                
+                item.style.setProperty('--severity-color', severityColor);
+                
+                const displayName = name.length > 50 ? name.substring(0, 50) + '...' : name;
+                
+                item.innerHTML = `
+                    <div>
+                        <div class="machine-downtime-name">${index + 1}. ${displayName}</div>
+                        <div class="machine-downtime-impact">${hours}h production impact</div>
+                    </div>
+                    <div>
+                        <div class="machine-downtime-value">${downtime} min</div>
+                        <div class="machine-downtime-hours">${hours} hours</div>
+                    </div>
+                `;
+                
+                container.appendChild(item);
+            });
+        }
+
+        function populateMachineDowntimeSelector() {
+            const selector = document.getElementById('machineDowntimeSelector');
+            if (!selector) return;
+
+            Object.keys(downtimeMachines).forEach(machineName => {
+                const option = document.createElement('option');
+                option.value = machineName;
+                option.textContent = machineName;
+                selector.appendChild(option);
+            });
+        }
+
+        // ENHANCED: Machine downtime breakdown now includes COMMENTS and highlights MAINTENANCE from Column M - PRESERVE ALL FUNCTIONALITY
+        function updateMachineDowntimeBreakdown() {
+            const selector = document.getElementById('machineDowntimeSelector');
+            const container = document.getElementById('machineDowntimeBreakdown');
+            if (!selector || !container) return;
+            
+            const selectedMachine = selector.value;
+            
+            container.innerHTML = '';
+            
+            if (!selectedMachine) {
+                container.innerHTML = `
+                    <p style="text-align: center; color: rgba(255, 255, 255, 0.6); padding: 2rem;">
+                        Select a machine above to view detailed downtime breakdown by category and shift<br>
+                        💬 <strong>Enhanced:</strong> Includes maintenance from Column M + comments where available
+                    </p>
+                `;
+                return;
+            }
+            
+            const breakdown = downtimeBreakdowns[selectedMachine];
+            const machineTotal = downtimeMachines[selectedMachine];
+            const shiftDetails = downtimeMachineShiftDetails[selectedMachine];
+            
+            if (!breakdown || Object.keys(breakdown).length === 0) {
+                container.innerHTML = `
+                    <p style="text-align: center; color: rgba(255, 255, 255, 0.6); padding: 2rem;">
+                        No detailed breakdown available for "${selectedMachine}"<br>
+                        Total downtime: ${machineTotal || 0} minutes
+                    </p>
+                `;
+                return;
+            }
+            
+            // Add machine summary
+            const summaryDiv = document.createElement('div');
+            summaryDiv.style.cssText = 'background: rgba(220, 38, 38, 0.1); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #dc2626;';
+            summaryDiv.innerHTML = `
+                <h4 style="color: #dc2626; margin-bottom: 10px; text-align: center;">Machine: ${selectedMachine}</h4>
+                <div style="text-align: center;">
+                    <span style="font-size: 1.5rem; font-weight: bold; color: #dc2626;">${machineTotal || 0} minutes</span>
+                    <span style="margin-left: 10px; color: rgba(255,255,255,0.7);">(${((machineTotal || 0) / 60).toFixed(1)} hours total)</span>
+                </div>
+            `;
+            container.appendChild(summaryDiv);
+            
+            // Show breakdown by category with maintenance highlighted
+            const categoryHeader = document.createElement('h5');
+            categoryHeader.textContent = 'Breakdown by Category (Maintenance from Column M):';
+            categoryHeader.style.cssText = 'color: #ffffff; margin: 20px 0 15px 0; font-size: 1.1rem;';
+            container.appendChild(categoryHeader);
+            
+            const sortedBreakdown = Object.entries(breakdown).sort((a, b) => b[1] - a[1]);
+            
+            sortedBreakdown.forEach(([category, minutes]) => {
+                const percent = machineTotal > 0 ? ((minutes / machineTotal) * 100).toFixed(1) : '0';
+                const hours = (minutes / 60).toFixed(1);
+                
+                const item = document.createElement('div');
+                item.className = 'breakdown-item';
+                
+                // Highlight maintenance
+                if (category === 'Maintenance') {
+                    item.style.cssText = 'background: rgba(255, 107, 53, 0.2); border: 2px solid #FF6B35; border-radius: 8px;';
+                }
+                
+                item.innerHTML = `
+                    <div class="breakdown-category">${category}${category === 'Maintenance' ? ' 🔧 (Column M)' : ''}</div>
+                    <div>
+                        <span class="breakdown-value">${minutes} min</span>
+                        <span class="breakdown-percent">(${percent}% • ${hours}h)</span>
+                    </div>
+                `;
+                
+                container.appendChild(item);
+            });
+            
+            // ENHANCED: Show breakdown by shift with COMMENTS if available
+            if (shiftDetails && Object.keys(shiftDetails).length > 0) {
+                const shiftHeader = document.createElement('h5');
+                shiftHeader.textContent = 'Breakdown by Shift with Comments:';
+                shiftHeader.style.cssText = 'color: #ffffff; margin: 30px 0 15px 0; font-size: 1.1rem; border-top: 2px solid rgba(220, 38, 38, 0.3); padding-top: 20px;';
+                container.appendChild(shiftHeader);
+                
+                Object.entries(shiftDetails).forEach(([shift, shiftData]) => {
+                    const shiftContainer = document.createElement('div');
+                    shiftContainer.style.cssText = 'background: rgba(139, 92, 246, 0.1); padding: 15px; margin-bottom: 15px; border-radius: 8px; border: 1px solid rgba(139, 92, 246, 0.3);';
+                    
+                    const shiftTitle = document.createElement('div');
+                    shiftTitle.style.cssText = 'font-weight: bold; color: #8b5cf6; margin-bottom: 10px; font-size: 1rem;';
+                    shiftTitle.innerHTML = `${shift}: ${shiftData.total} minutes (${(shiftData.total / 60).toFixed(1)} hours)`;
+                    shiftContainer.appendChild(shiftTitle);
+                    
+                    if (shiftData.breakdown) {
+                        Object.entries(shiftData.breakdown).sort((a, b) => b[1] - a[1]).forEach(([category, minutes]) => {
+                            const shiftPercent = shiftData.total > 0 ? ((minutes / shiftData.total) * 100).toFixed(1) : '0';
+                            const shiftItem = document.createElement('div');
+                            shiftItem.style.cssText = 'display: flex; justify-content: space-between; padding: 6px 10px; margin-bottom: 4px; background: rgba(255, 255, 255, 0.05); border-radius: 4px;';
+                            
+                            // Highlight maintenance in shift breakdown too
+                            if (category === 'Maintenance') {
+                                shiftItem.style.cssText += ' border-left: 4px solid #FF6B35;';
+                            }
+                            
+                            shiftItem.innerHTML = `
+                                <span style="color: #ffffff;">${category}${category === 'Maintenance' ? ' 🔧' : ''}</span>
+                                <span style="color: #8b5cf6; font-weight: 600;">${minutes} min (${shiftPercent}%)</span>
+                            `;
+                            shiftContainer.appendChild(shiftItem);
+                            
+                            // NEW: Add comments for this category in this shift if available
+                            if (shiftData.comments && shiftData.comments[category]) {
+                                const commentsContainer = document.createElement('div');
+                                commentsContainer.style.cssText = 'margin-top: 8px; margin-left: 15px;';
+                                
+                                const commentsHeader = document.createElement('div');
+                                commentsHeader.style.cssText = 'font-size: 0.8rem; color: rgba(255, 255, 255, 0.6); margin-bottom: 5px; font-weight: 600;';
+                                commentsHeader.textContent = `💬 Comments for ${category}:`;
+                                commentsContainer.appendChild(commentsHeader);
+                                
+                                shiftData.comments[category].forEach(commentData => {
+                                    const commentItem = document.createElement('div');
+                                    commentItem.className = 'comment-item';
+                                    commentItem.innerHTML = `
+                                        <div class="comment-header">
+                                            <span class="comment-meta">Op ${commentData.operation} | ${commentData.operator} | ${commentData.item}</span>
+                                            <span class="comment-downtime">${commentData.downtime} min</span>
+                                        </div>
+                                        <div class="comment-text">"${commentData.comment}"</div>
+                                    `;
+                                    commentsContainer.appendChild(commentItem);
+                                });
+                                
+                                shiftContainer.appendChild(commentsContainer);
+                            }
+                        });
+                    }
+                    
+                    container.appendChild(shiftContainer);
+                });
+            }
+            
+            // Add total summary
+            const totalItem = document.createElement('div');
+            totalItem.className = 'breakdown-item';
+            totalItem.style.borderTop = '3px solid #dc2626';
+            totalItem.style.marginTop = '2rem';
+            totalItem.style.fontWeight = 'bold';
+            totalItem.innerHTML = `
+                <div class="breakdown-category">Total Machine Downtime</div>
+                <div>
+                    <span class="breakdown-value">${machineTotal || 0} min</span>
+                    <span class="breakdown-percent">(${((machineTotal || 0) / 60).toFixed(1)}h total)</span>
+                </div>
+            `;
+            
+            container.appendChild(totalItem);
+        }
+
+        // Initialize all charts when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔄 DOM loaded, initializing NO CONSOLIDATION dashboard...');
+            console.log('🚫 NO CONSOLIDATION: Each record processed directly from Excel');
+            console.log('📊 OEE calculations: Simple Average = Sum of all OEEs / Total machines (NO STAFF = 0%)');
+            console.log('👥 Case-insensitive operators: TODOSI ROBERTS = todosi roberts');
+            setTimeout(initializeCharts, 100);
+        });
+
+        // Add event listener for machine downtime selector
+        document.addEventListener('DOMContentLoaded', function() {
+            const selector = document.getElementById('machineDowntimeSelector');
+            if (selector) {
+                selector.addEventListener('change', updateMachineDowntimeBreakdown);
+            }
+        });
+    </script>
+</body>
+</html>
