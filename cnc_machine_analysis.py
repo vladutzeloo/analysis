@@ -245,7 +245,7 @@ def calculate_running_hours(records, exclude_samples=True):
     return dict(machine_stats)
 
 
-def generate_html_report(machine_stats, all_records, output_file, month_filter='all'):
+def generate_html_report(machine_stats, all_records, output_file, available_months):
     """
     Generate a beautiful interactive HTML report with charts and filtering
     """
@@ -594,11 +594,18 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
 <body>
     <div class="container">
         <div class="header">
-            <h1>⚙️ CNC Machine Running Time Analysis</h1>
-            <p class="subtitle">Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | Date Range: {date_range} | Filter: {month_filter}</p>
+            <h1>⚙️ CNC Machine Running Time Analysis - Power BI Dashboard</h1>
+            <p class="subtitle">Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | Date Range: {date_range}</p>
+            <div style="margin-top: 15px;">
+                <label style="color: white; font-weight: 500; margin-right: 10px;">📅 Filter by Date:</label>
+                <select id="dateFilter" style="padding: 8px 15px; border-radius: 8px; border: 2px solid #dc2626; background: rgba(255,255,255,0.1); color: white; font-size: 1rem; cursor: pointer;">
+                    <option value="all">All Dates</option>
+                    {"".join(f'<option value="{month}">{month}</option>' for month in available_months)}
+                </select>
+            </div>
         </div>
 
-        <div class="summary-cards">
+        <div class="summary-cards" id="summaryCards">
             <div class="summary-card production">
                 <h3>Production Hours</h3>
                 <div class="value">{total_production_hours:.2f}h</div>
@@ -687,6 +694,11 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
                 'dates': stats['dates'],
                 'shifts': stats['shifts'],
                 'items': stats['items'],
+                'available_capacity': stats['available_capacity'],
+                'downtime_hours': stats['downtime_hours'],
+                'downtime_percent': stats['downtime_percent'],
+                'availability_percent': stats['availability_percent'],
+                'shift_counts': dict(stats['shift_counts']),
                 'records': [{
                     'date': r['date'],
                     'shift': r['shift'],
@@ -839,37 +851,48 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
                         <strong>Items:</strong> ${{data.items.join(', ')}}
                     </div>
 
-                    <h4 style="margin-top: 20px; margin-bottom: 10px; color: #0ea5e9;">Production Records</h4>
-                    <table class="records-table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Shift</th>
-                                <th>Item</th>
-                                <th>Operation</th>
-                                <th>Parts</th>
-                                <th>Cycle Time</th>
-                                <th>Hours</th>
-                                <th>Type</th>
-                                <th>Operator</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${{data.records.map(r => `
-                                <tr>
-                                    <td>${{r.date}}</td>
-                                    <td>${{r.shift}}</td>
-                                    <td>${{r.item}}</td>
-                                    <td>${{r.operation}}</td>
-                                    <td>${{r.ok_parts.toLocaleString()}}</td>
-                                    <td>${{r.cycle_time}}s</td>
-                                    <td>${{(r.ok_parts * r.cycle_time / 3600).toFixed(2)}}h</td>
-                                    <td>${{r.is_sample ? '<span class="sample-badge">SAMPLE</span>' : '<span class="production-badge">PRODUCTION</span>'}}</td>
-                                    <td>${{r.operator}}</td>
-                                </tr>
+                    <h4 style="margin-top: 20px; margin-bottom: 15px; color: #dc2626; font-size: 1.2rem;">⚡ Downtime Analysis</h4>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                        <div style="background: linear-gradient(135deg, rgba(220, 38, 38, 0.2) 0%, rgba(153, 27, 27, 0.1) 100%); padding: 20px; border-radius: 12px; border: 1px solid rgba(220, 38, 38, 0.3); text-align: center;">
+                            <div style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.7); margin-bottom: 8px; text-transform: uppercase; font-weight: 600;">Available Capacity</div>
+                            <div style="font-size: 2rem; font-weight: 700; color: #ffffff;">${{data.available_capacity.toFixed(1)}}h</div>
+                            <div style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.6); margin-top: 5px;">Total Shifts × 8h</div>
+                        </div>
+
+                        <div style="background: linear-gradient(135deg, rgba(5, 150, 105, 0.2) 0%, rgba(4, 120, 87, 0.1) 100%); padding: 20px; border-radius: 12px; border: 1px solid rgba(5, 150, 105, 0.3); text-align: center;">
+                            <div style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.7); margin-bottom: 8px; text-transform: uppercase; font-weight: 600;">Running Time</div>
+                            <div style="font-size: 2rem; font-weight: 700; color: #10b981;">${{data.total_hours.toFixed(1)}}h</div>
+                            <div style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.6); margin-top: 5px;">Actual Production</div>
+                        </div>
+
+                        <div style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(217, 119, 6, 0.1) 100%); padding: 20px; border-radius: 12px; border: 1px solid rgba(245, 158, 11, 0.3); text-align: center;">
+                            <div style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.7); margin-bottom: 8px; text-transform: uppercase; font-weight: 600;">Downtime</div>
+                            <div style="font-size: 2rem; font-weight: 700; color: #f59e0b;">${{data.downtime_hours.toFixed(1)}}h</div>
+                            <div style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.6); margin-top: 5px;">${{data.downtime_percent.toFixed(1)}}% Lost</div>
+                        </div>
+
+                        <div style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.1) 100%); padding: 20px; border-radius: 12px; border: 1px solid rgba(59, 130, 246, 0.3); text-align: center;">
+                            <div style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.7); margin-bottom: 8px; text-transform: uppercase; font-weight: 600;">Availability</div>
+                            <div style="font-size: 2rem; font-weight: 700; color: #3b82f6;">${{data.availability_percent.toFixed(1)}}%</div>
+                            <div style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.6); margin-top: 5px;">Machine Uptime</div>
+                        </div>
+                    </div>
+
+                    <div style="background: rgba(255, 255, 255, 0.05); padding: 20px; border-radius: 12px; border-left: 4px solid #dc2626;">
+                        <h5 style="color: #dc2626; font-size: 1rem; margin-bottom: 15px;">📊 Shift Breakdown</h5>
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            ${{Object.entries(data.shift_counts).map(([shift, count]) => `
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                                    <span style="font-weight: 600; color: #ffffff; font-size: 1rem;">${{shift}}</span>
+                                    <div style="text-align: right;">
+                                        <div style="font-size: 1.2rem; font-weight: 700; color: #dc2626;">${{count}} runs</div>
+                                        <div style="font-size: 0.85rem; color: rgba(255,255,255,0.6);">${{(count * 8).toFixed(1)}}h capacity</div>
+                                    </div>
+                                </div>
                             `).join('')}}
-                        </tbody>
-                    </table>
+                        </div>
+                    </div>
                 </div>
             `;
 
@@ -1184,7 +1207,7 @@ def main():
     print(f"✅ Total records extracted: {len(all_records)}")
     print()
 
-    # Show available months
+    # Show available months (info only, no prompting)
     available_months = get_available_months(all_records)
     if available_months:
         print("📅 Available months in data:")
@@ -1192,27 +1215,12 @@ def main():
             month_records = [r for r in all_records if r.get('date', '').startswith(month)]
             print(f"   {i}. {month} ({len(month_records)} records)")
         print()
-
-        # Ask user which month(s) to analyze
-        month_choice = input("Enter month(s) to analyze (e.g., '2025-11' or '2025-10,2025-11' or 'all'): ").strip()
-
-        if month_choice.lower() == 'all' or not month_choice:
-            selected_months = ['all']
-            print("✅ Analyzing all months")
-        else:
-            selected_months = [m.strip() for m in month_choice.split(',')]
-            print(f"✅ Analyzing month(s): {', '.join(selected_months)}")
-
-        # Filter records by selected months
-        all_records = filter_records_by_month(all_records, selected_months)
-        print(f"📊 Filtered to {len(all_records)} records")
-        print()
+        print("✅ Processing ALL data - filtering available in dashboard")
     else:
         print("⚠️  No date information found in records")
-        selected_months = ['all']
-        print()
+    print()
 
-    # Calculate running hours
+    # Calculate running hours from ALL records
     machine_stats = calculate_running_hours(all_records, exclude_samples=True)
 
     # Get output folder path from command line or GUI dialog
@@ -1244,15 +1252,9 @@ def main():
     # Generate reports
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    # Format month filter for display
-    if selected_months == ['all'] or not selected_months:
-        month_display = "All Months"
-    else:
-        month_display = ", ".join(selected_months)
-
     # Generate HTML report (main output)
     html_file = os.path.join(output_folder, f"cnc_running_hours_dashboard_{timestamp}.html")
-    generate_html_report(machine_stats, all_records, html_file, month_filter=month_display)
+    generate_html_report(machine_stats, all_records, html_file, available_months)
 
     # Generate text report (backup)
     txt_file = os.path.join(output_folder, f"cnc_running_hours_report_{timestamp}.txt")
