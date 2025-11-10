@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CNC Machine Running Time Analysis - 2025-11-10</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #ffffff;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: linear-gradient(135deg, #0f3460 0%, #16213e 100%);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(14, 165, 233, 0.3);
+            overflow: hidden;
+            border: 1px solid rgba(14, 165, 233, 0.3);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.95;
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            padding: 30px;
+            background: rgba(15, 52, 96, 0.5);
+        }
+
+        .summary-card {
+            background: linear-gradient(135deg, var(--card-color, #0ea5e9) 0%, rgba(2, 132, 199, 0.8) 100%);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .summary-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(14, 165, 233, 0.4);
+        }
+
+        .summary-card h3 {
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .summary-card .value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .summary-card .label {
+            font-size: 0.85rem;
+            opacity: 0.85;
+        }
+
+        .summary-card.production { --card-color: #10b981; }
+        .summary-card.sample { --card-color: #f59e0b; }
+        .summary-card.total { --card-color: #0ea5e9; }
+        .summary-card.parts { --card-color: #8b5cf6; }
+
+        .content-section {
+            padding: 30px;
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            color: #0ea5e9;
+            border-bottom: 2px solid #0ea5e9;
+            padding-bottom: 10px;
+        }
+
+        .chart-container {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 400px;
+            max-height: 500px;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+
+        canvas {
+            max-height: 400px;
+        }
+
+        .machine-selector {
+            width: 100%;
+            padding: 15px;
+            font-size: 1rem;
+            border-radius: 10px;
+            border: 2px solid #0ea5e9;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            margin-bottom: 20px;
+            cursor: pointer;
+        }
+
+        .machine-selector option {
+            background: #16213e;
+            color: white;
+        }
+
+        .machine-details {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        .machine-details h3 {
+            color: #0ea5e9;
+            margin-bottom: 15px;
+            font-size: 1.4rem;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .detail-item {
+            background: rgba(14, 165, 233, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #0ea5e9;
+        }
+
+        .detail-item .label {
+            font-size: 0.85rem;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .detail-item .value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #0ea5e9;
+        }
+
+        .records-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .records-table th {
+            background: rgba(14, 165, 233, 0.2);
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #0ea5e9;
+        }
+
+        .records-table td {
+            padding: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .records-table tr:hover {
+            background: rgba(14, 165, 233, 0.1);
+        }
+
+        .sample-badge {
+            background: #f59e0b;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .production-badge {
+            background: #10b981;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .filter-container {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-input {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px;
+            border-radius: 10px;
+            border: 2px solid #0ea5e9;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 1rem;
+        }
+
+        .filter-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .alert-box {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .footer {
+            background: rgba(15, 52, 96, 0.5);
+            padding: 20px;
+            text-align: center;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚙️ CNC Machine Running Time Analysis</h1>
+            <p class="subtitle">Generated: 2025-11-10 11:36:02 | Date Range: 2025-11-07 to 2025-11-07</p>
+        </div>
+
+        <div class="summary-cards">
+            <div class="summary-card production">
+                <h3>Production Hours</h3>
+                <div class="value">1.93h</div>
+                <div class="label">Excluding samples (480s cycle)</div>
+            </div>
+            <div class="summary-card sample">
+                <h3>Sample Hours</h3>
+                <div class="value">0.53h</div>
+                <div class="label">480s cycle time only</div>
+            </div>
+            <div class="summary-card total">
+                <h3>Total Hours</h3>
+                <div class="value">2.46h</div>
+                <div class="label">All production time</div>
+            </div>
+            <div class="summary-card parts">
+                <h3>Total Machines</h3>
+                <div class="value">11</div>
+                <div class="label">1,846 production parts</div>
+            </div>
+        </div>
+
+        <div class="content-section">
+            <h2 class="section-title">📊 Machine Running Hours Comparison</h2>
+            <div class="chart-container">
+                <div class="chart-wrapper">
+                    <canvas id="machineHoursChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-section">
+            <h2 class="section-title">🔧 Machine Details Breakdown</h2>
+            <select id="machineSelector" class="machine-selector">
+                <option value="">Select a machine to view detailed breakdown...</option>
+                <option value="0">109 - Miyano ABX 80</option><option value="1">210 - SW MEXIC</option><option value="2">206 - BA 322 SW</option><option value="3">106 - BNE 51MYY Miyano</option><option value="4">208 - YASDA PX30i</option><option value="5">204 - Hec 400</option><option value="6">211 - SW</option><option value="7">306 - Kellenberger 100</option><option value="8">304 - GSU 30B Shigiya</option><option value="9">108 - Nomura N32</option><option value="10">201 - VM740S Neway</option>
+            </select>
+            <div id="machineDetailsContainer"></div>
+        </div>
+
+        <div class="content-section">
+            <h2 class="section-title">📦 Item-Level Production Summary</h2>
+            <div class="filter-container">
+                <input type="text" id="itemFilter" class="filter-input" placeholder="Filter by item name...">
+            </div>
+            <table class="records-table" id="itemTable">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Production Hours</th>
+                        <th>Total Parts</th>
+                        <th>Machines Used</th>
+                        <th>Cycle Times</th>
+                        <th>Type</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>AU.KB3068-B-0208-DRE</td>
+                        <td>0.31h</td>
+                        <td>534</td>
+                        <td>1</td>
+                        <td>2.1s</td>
+                        <td><span class="production-badge">PRODUCTION</span></td>
+                    </tr><tr>
+                        <td>TK.KWVE15-B-A-ESC-0038-WW1</td>
+                        <td>0.30h</td>
+                        <td>243</td>
+                        <td>1</td>
+                        <td>4.4s</td>
+                        <td><span class="production-badge">PRODUCTION</span></td>
+                    </tr><tr>
+                        <td>R901321450</td>
+                        <td>0.27h</td>
+                        <td>65</td>
+                        <td>1</td>
+                        <td>15.0s</td>
+                        <td><span class="production-badge">PRODUCTION</span></td>
+                    </tr><tr>
+                        <td>AU.KB2045-B-0208-DRE</td>
+                        <td>0.27h</td>
+                        <td>649</td>
+                        <td>1</td>
+                        <td>1.5s</td>
+                        <td><span class="production-badge">PRODUCTION</span></td>
+                    </tr><tr>
+                        <td>F-320745-1901.DL.ACT15</td>
+                        <td>0.21h</td>
+                        <td>16</td>
+                        <td>1</td>
+                        <td>47.0s</td>
+                        <td><span class="production-badge">PRODUCTION</span></td>
+                    </tr><tr>
+                        <td>TK.KWVE20-B-A-L-0038-WW1</td>
+                        <td>0.19h</td>
+                        <td>108</td>
+                        <td>1</td>
+                        <td>6.4s</td>
+                        <td><span class="production-badge">PRODUCTION</span></td>
+                    </tr><tr>
+                        <td>TK.KWVE30-B-A-H-0038-WW1</td>
+                        <td>0.11h</td>
+                        <td>95</td>
+                        <td>1</td>
+                        <td>4.0s</td>
+                        <td><span class="production-badge">PRODUCTION</span></td>
+                    </tr><tr>
+                        <td>F-552668.01-0012</td>
+                        <td>0.10h</td>
+                        <td>20</td>
+                        <td>1</td>
+                        <td>17.8s</td>
+                        <td><span class="production-badge">PRODUCTION</span></td>
+                    </tr><tr>
+                        <td>R900601678</td>
+                        <td>0.07h</td>
+                        <td>42</td>
+                        <td>1</td>
+                        <td>6.0s</td>
+                        <td><span class="production-badge">PRODUCTION</span></td>
+                    </tr><tr>
+                        <td>1535100044</td>
+                        <td>0.06h</td>
+                        <td>30</td>
+                        <td>1</td>
+                        <td>7.3s</td>
+                        <td><span class="production-badge">PRODUCTION</span></td>
+                    </tr><tr>
+                        <td>R900305232</td>
+                        <td>0.03h</td>
+                        <td>35</td>
+                        <td>1</td>
+                        <td>3.0s</td>
+                        <td><span class="production-badge">PRODUCTION</span></td>
+                    </tr><tr>
+                        <td>TK.KWVE30-B-A-S-0038-WW1</td>
+                        <td>0.01h</td>
+                        <td>8</td>
+                        <td>1</td>
+                        <td>4.5s</td>
+                        <td><span class="production-badge">PRODUCTION</span></td>
+                    </tr><tr>
+                        <td>F-320745-0321.APL.ACT</td>
+                        <td>0.00h</td>
+                        <td>1</td>
+                        <td>1</td>
+                        <td>17.5s</td>
+                        <td><span class="production-badge">PRODUCTION</span></td>
+                    </tr><tr>
+                        <td>0</td>
+                        <td>0.00h</td>
+                        <td>0</td>
+                        <td>1</td>
+                        <td>480.0s</td>
+                        <td><span class="sample-badge">SAMPLE</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="footer">
+            <p>⚠️ Note: Sample parts (cycle time = 480s) are tracked separately and excluded from production hours</p>
+            <p>Running Time Formula: (OK Parts × Cycle Time) / 3600 = Hours</p>
+        </div>
+    </div>
+
+    <script>
+        // Machine data
+        const machineData = {"106 - BNE 51MYY Miyano": {"name": "106 - BNE 51MYY Miyano", "production_hours": 0.2704166666666667, "sample_hours": 0.0, "total_hours": 0.2704166666666667, "production_parts": 649, "sample_parts": 0, "total_parts": 649, "dates": ["2025-11-07"], "shifts": ["S1", "S2", "S3"], "items": ["AU.KB2045-B-0208-DRE"], "records": [{"date": "2025-11-07", "shift": "S1", "item": "AU.KB2045-B-0208-DRE", "operation": "Op 20", "ok_parts": 175, "cycle_time": 1.5, "is_sample": false, "operator": "Sumahar Liviu\u00a0 (S1)"}, {"date": "2025-11-07", "shift": "S2", "item": "AU.KB2045-B-0208-DRE", "operation": "Op 20", "ok_parts": 244, "cycle_time": 1.5, "is_sample": false, "operator": "Iudian Mihai (S2)"}, {"date": "2025-11-07", "shift": "S3", "item": "AU.KB2045-B-0208-DRE", "operation": "Op 20", "ok_parts": 230, "cycle_time": 1.5, "is_sample": false, "operator": "Jalpure Nilesh (S3)"}]}, "108 - Nomura N32": {"name": "108 - Nomura N32", "production_hours": 0.060833333333333336, "sample_hours": 0.0, "total_hours": 0.060833333333333336, "production_parts": 30, "sample_parts": 0, "total_parts": 30, "dates": ["2025-11-07"], "shifts": ["S1"], "items": ["1535100044"], "records": [{"date": "2025-11-07", "shift": "S1", "item": "1535100044", "operation": "Op 20", "ok_parts": 30, "cycle_time": 7.3, "is_sample": false, "operator": "Ratan Dan\u00a0 (S1)"}]}, "109 - Miyano ABX 80": {"name": "109 - Miyano ABX 80", "production_hours": 0.3115, "sample_hours": 0.0, "total_hours": 0.3115, "production_parts": 534, "sample_parts": 0, "total_parts": 534, "dates": ["2025-11-07"], "shifts": ["S1", "S2", "S3"], "items": ["AU.KB3068-B-0208-DRE"], "records": [{"date": "2025-11-07", "shift": "S1", "item": "AU.KB3068-B-0208-DRE", "operation": "Op 20", "ok_parts": 55, "cycle_time": 2.1, "is_sample": false, "operator": "Kanakala Charan\u00a0 (S1)"}, {"date": "2025-11-07", "shift": "S1", "item": "AU.KB3068-B-0208-DRE", "operation": "Op 1900-01-20 00:00:00", "ok_parts": 104, "cycle_time": 2.1, "is_sample": false, "operator": "Kanakala Charan\u00a0 (S1)"}, {"date": "2025-11-07", "shift": "S2", "item": "AU.KB3068-B-0208-DRE", "operation": "Op 20", "ok_parts": 180, "cycle_time": 2.1, "is_sample": false, "operator": "Toth Cristian\u00a0 (S2)"}, {"date": "2025-11-07", "shift": "S3", "item": "AU.KB3068-B-0208-DRE", "operation": "Op 20", "ok_parts": 195, "cycle_time": 2.1, "is_sample": false, "operator": "Jalpure Nilesh (S3)"}]}, "201 - VM740S Neway": {"name": "201 - VM740S Neway", "production_hours": 0.034027777777777775, "sample_hours": 0.0, "total_hours": 0.034027777777777775, "production_parts": 36, "sample_parts": 0, "total_parts": 36, "dates": ["2025-11-07"], "shifts": ["S1", "S2"], "items": ["F-320745-0321.APL.ACT", "R900305232"], "records": [{"date": "2025-11-07", "shift": "S1", "item": "R900305232", "operation": "Op 30", "ok_parts": 35, "cycle_time": 3.0, "is_sample": false, "operator": "Spaiuc Bogdan\u00a0 (S1)"}, {"date": "2025-11-07", "shift": "S2", "item": "F-320745-0321.APL.ACT", "operation": "Op 30", "ok_parts": 1, "cycle_time": 17.5, "is_sample": false, "operator": "Mihut Dragos\u00a0 (S2)"}]}, "204 - Hec 400": {"name": "204 - Hec 400", "production_hours": 0.192, "sample_hours": 0.0, "total_hours": 0.192, "production_parts": 108, "sample_parts": 0, "total_parts": 108, "dates": ["2025-11-07"], "shifts": ["S1", "S2", "S3"], "items": ["TK.KWVE20-B-A-L-0038-WW1"], "records": [{"date": "2025-11-07", "shift": "S1", "item": "TK.KWVE20-B-A-L-0038-WW1", "operation": "Op 50", "ok_parts": 36, "cycle_time": 6.4, "is_sample": false, "operator": "Spaiuc Bogdan\u00a0 (S1)"}, {"date": "2025-11-07", "shift": "S2", "item": "TK.KWVE20-B-A-L-0038-WW1", "operation": "Op 50", "ok_parts": 36, "cycle_time": 6.4, "is_sample": false, "operator": "Cutus Bogdan (S2)"}, {"date": "2025-11-07", "shift": "S3", "item": "TK.KWVE20-B-A-L-0038-WW1", "operation": "Op 50", "ok_parts": 36, "cycle_time": 6.4, "is_sample": false, "operator": "Mishal Ranjit\u00a0 (S3)"}]}, "206 - BA 322 SW": {"name": "206 - BA 322 SW", "production_hours": 0.2708333333333333, "sample_hours": 0.0, "total_hours": 0.2708333333333333, "production_parts": 65, "sample_parts": 0, "total_parts": 65, "dates": ["2025-11-07"], "shifts": ["S1", "S2"], "items": ["R901321450"], "records": [{"date": "2025-11-07", "shift": "S1", "item": "R901321450", "operation": "Op 50", "ok_parts": 27, "cycle_time": 15.0, "is_sample": false, "operator": "Besleaga Adrian (S1)"}, {"date": "2025-11-07", "shift": "S2", "item": "R901321450", "operation": "Op 50", "ok_parts": 38, "cycle_time": 15.0, "is_sample": false, "operator": "Ilie Constantin\u00a0 (S2)"}]}, "208 - YASDA PX30i": {"name": "208 - YASDA PX30i", "production_hours": 0.2088888888888889, "sample_hours": 0.0, "total_hours": 0.2088888888888889, "production_parts": 16, "sample_parts": 0, "total_parts": 16, "dates": ["2025-11-07"], "shifts": ["S1", "S2"], "items": ["F-320745-1901.DL.ACT15"], "records": [{"date": "2025-11-07", "shift": "S1", "item": "F-320745-1901.DL.ACT15", "operation": "Op 20", "ok_parts": 6, "cycle_time": 47.0, "is_sample": false, "operator": "Minea Dragos\u00a0 (S1)"}, {"date": "2025-11-07", "shift": "S2", "item": "F-320745-1901.DL.ACT15", "operation": "Op 20", "ok_parts": 10, "cycle_time": 47.0, "is_sample": false, "operator": "Mihut Dragos\u00a0 (S2)"}]}, "210 - SW MEXIC": {"name": "210 - SW MEXIC", "production_hours": 0.297, "sample_hours": 0.0, "total_hours": 0.297, "production_parts": 243, "sample_parts": 0, "total_parts": 243, "dates": ["2025-11-07"], "shifts": ["S1", "S2", "S3"], "items": ["TK.KWVE15-B-A-ESC-0038-WW1"], "records": [{"date": "2025-11-07", "shift": "S1", "item": "TK.KWVE15-B-A-ESC-0038-WW1", "operation": "Op 50", "ok_parts": 48, "cycle_time": 4.4, "is_sample": false, "operator": "Ciuparu Ion (S1)"}, {"date": "2025-11-07", "shift": "S2", "item": "TK.KWVE15-B-A-ESC-0038-WW1", "operation": "Op 50", "ok_parts": 87, "cycle_time": 4.4, "is_sample": false, "operator": "Tudosie Robert\u00a0 (S2)"}, {"date": "2025-11-07", "shift": "S3", "item": "TK.KWVE15-B-A-ESC-0038-WW1", "operation": "Op 50", "ok_parts": 108, "cycle_time": 4.4, "is_sample": false, "operator": "Prasad Sunil\u00a0 (S3)"}]}, "211 - SW": {"name": "211 - SW", "production_hours": 0.11555555555555555, "sample_hours": 0.5333333333333333, "total_hours": 0.6488888888888888, "production_parts": 103, "sample_parts": 4, "total_parts": 107, "dates": ["2025-11-07"], "shifts": ["S1", "S2", "S3"], "items": ["0", "TK.KWVE30-B-A-H-0038-WW1", "TK.KWVE30-B-A-S-0038-WW1"], "records": [{"date": "2025-11-07", "shift": "S1", "item": "TK.KWVE30-B-A-S-0038-WW1", "operation": "Op 50", "ok_parts": 8, "cycle_time": 4.5, "is_sample": false, "operator": "Ciuparu Ion (S1)"}, {"date": "2025-11-07", "shift": "S1", "item": "0", "operation": "Op 50", "ok_parts": 4, "cycle_time": 480.0, "is_sample": true, "operator": "Ciuparu Ion (S1)"}, {"date": "2025-11-07", "shift": "S2", "item": "TK.KWVE30-B-A-H-0038-WW1", "operation": "Op 50", "ok_parts": 8, "cycle_time": 4.0, "is_sample": false, "operator": "Sirbu Gabriel\u00a0 (S2)"}, {"date": "2025-11-07", "shift": "S3", "item": "TK.KWVE30-B-A-H-0038-WW1", "operation": "Op 50", "ok_parts": 87, "cycle_time": 4.0, "is_sample": false, "operator": "Cirstinescu Andrei\u00a0 (S3)"}]}, "304 - GSU 30B Shigiya": {"name": "304 - GSU 30B Shigiya", "production_hours": 0.07, "sample_hours": 0.0, "total_hours": 0.07, "production_parts": 42, "sample_parts": 0, "total_parts": 42, "dates": ["2025-11-07"], "shifts": ["S1"], "items": ["R900601678"], "records": [{"date": "2025-11-07", "shift": "S1", "item": "R900601678", "operation": "Op 70", "ok_parts": 42, "cycle_time": 6.0, "is_sample": false, "operator": "Popa Andrei\u00a0 (S1)"}]}, "306 - Kellenberger 100": {"name": "306 - Kellenberger 100", "production_hours": 0.09888888888888889, "sample_hours": 0.0, "total_hours": 0.09888888888888889, "production_parts": 20, "sample_parts": 0, "total_parts": 20, "dates": ["2025-11-07"], "shifts": ["S1"], "items": ["F-552668.01-0012"], "records": [{"date": "2025-11-07", "shift": "S1", "item": "F-552668.01-0012", "operation": "Op 20", "ok_parts": 20, "cycle_time": 17.8, "is_sample": false, "operator": "Popa Andrei\u00a0 (S1)"}]}};
+
+        // Chart: Machine Hours Comparison
+        const ctx = document.getElementById('machineHoursChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ["109 - Miyano ABX 80", "210 - SW MEXIC", "206 - BA 322 SW", "106 - BNE 51MYY Miyano", "208 - YASDA PX30i", "204 - Hec 400", "211 - SW", "306 - Kellenberger 100", "304 - GSU 30B Shigiya", "108 - Nomura N32", "201 - VM740S Neway"],
+                datasets: [
+                    {
+                        label: 'Production Hours',
+                        data: [0.3115, 0.297, 0.2708333333333333, 0.2704166666666667, 0.2088888888888889, 0.192, 0.11555555555555555, 0.09888888888888889, 0.07, 0.060833333333333336, 0.034027777777777775],
+                        backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                        borderColor: 'rgba(16, 185, 129, 1)',
+                        borderWidth: 2
+                    },
+                    {
+                        label: 'Sample Hours (480s cycle)',
+                        data: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.5333333333333333, 0.0, 0.0, 0.0, 0.0],
+                        backgroundColor: 'rgba(245, 158, 11, 0.8)',
+                        borderColor: 'rgba(245, 158, 11, 1)',
+                        borderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: 'white',
+                            font: { size: 14 }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: 'white',
+                        bodyColor: 'white',
+                        callbacks: {
+                            afterBody: function(context) {
+                                const index = context[0].dataIndex;
+                                const machine = Object.keys(machineData)[index];
+                                const data = machineData[machine];
+                                return [
+                                    '',
+                                    'Total: ' + data.total_hours.toFixed(2) + 'h',
+                                    'Production Parts: ' + data.production_parts.toLocaleString(),
+                                    'Sample Parts: ' + data.sample_parts.toLocaleString()
+                                ];
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        stacked: true,
+                        ticks: {
+                            color: 'white',
+                            maxRotation: 45,
+                            minRotation: 45
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    },
+                    y: {
+                        stacked: true,
+                        ticks: {
+                            color: 'white',
+                            callback: function(value) {
+                                return value + 'h';
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Running Hours',
+                            color: 'white',
+                            font: { size: 14 }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Machine selector
+        document.getElementById('machineSelector').addEventListener('change', function() {
+            const index = parseInt(this.value);
+            const container = document.getElementById('machineDetailsContainer');
+
+            if (isNaN(index)) {
+                container.innerHTML = '';
+                return;
+            }
+
+            const machineName = Object.keys(machineData)[index];
+            const data = machineData[machineName];
+
+            let html = `
+                <div class="machine-details">
+                    <h3>${machineName}</h3>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <div class="label">Production Hours</div>
+                            <div class="value">${data.production_hours.toFixed(2)}h</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="label">Sample Hours</div>
+                            <div class="value">${data.sample_hours.toFixed(2)}h</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="label">Total Hours</div>
+                            <div class="value">${data.total_hours.toFixed(2)}h</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="label">Production Parts</div>
+                            <div class="value">${data.production_parts.toLocaleString()}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="label">Sample Parts</div>
+                            <div class="value">${data.sample_parts.toLocaleString()}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="label">Items Produced</div>
+                            <div class="value">${data.items.length}</div>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <strong>Active Dates:</strong> ${data.dates.join(', ')}
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <strong>Shifts:</strong> ${data.shifts.join(', ')}
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <strong>Items:</strong> ${data.items.join(', ')}
+                    </div>
+
+                    <h4 style="margin-top: 20px; margin-bottom: 10px; color: #0ea5e9;">Production Records</h4>
+                    <table class="records-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Shift</th>
+                                <th>Item</th>
+                                <th>Operation</th>
+                                <th>Parts</th>
+                                <th>Cycle Time</th>
+                                <th>Hours</th>
+                                <th>Type</th>
+                                <th>Operator</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.records.map(r => `
+                                <tr>
+                                    <td>${r.date}</td>
+                                    <td>${r.shift}</td>
+                                    <td>${r.item}</td>
+                                    <td>${r.operation}</td>
+                                    <td>${r.ok_parts.toLocaleString()}</td>
+                                    <td>${r.cycle_time}s</td>
+                                    <td>${(r.ok_parts * r.cycle_time / 3600).toFixed(2)}h</td>
+                                    <td>${r.is_sample ? '<span class="sample-badge">SAMPLE</span>' : '<span class="production-badge">PRODUCTION</span>'}</td>
+                                    <td>${r.operator}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        });
+
+        // Item filter
+        document.getElementById('itemFilter').addEventListener('input', function() {
+            const filter = this.value.toLowerCase();
+            const rows = document.querySelectorAll('#itemTable tbody tr');
+
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(filter) ? '' : 'none';
+            });
+        });
+    </script>
+</body>
+</html>

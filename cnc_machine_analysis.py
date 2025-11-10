@@ -216,6 +216,625 @@ def calculate_running_hours(records, exclude_samples=True):
     return dict(machine_stats)
 
 
+def generate_html_report(machine_stats, all_records, output_file):
+    """
+    Generate a beautiful interactive HTML report with charts and filtering
+    """
+    # Calculate summary statistics
+    total_machines = len(machine_stats)
+    total_production_hours = sum(stats['total_hours'] for stats in machine_stats.values())
+    total_sample_hours = sum(stats['sample_hours'] for stats in machine_stats.values())
+    total_all_hours = sum(stats['total_hours_with_samples'] for stats in machine_stats.values())
+    total_production_parts = sum(stats['total_parts'] for stats in machine_stats.values())
+    total_sample_parts = sum(stats['sample_parts'] for stats in machine_stats.values())
+
+    # Get all unique dates
+    all_dates = set()
+    for stats in machine_stats.values():
+        all_dates.update(stats['dates'])
+    date_range = f"{min(all_dates)} to {max(all_dates)}" if all_dates else "N/A"
+
+    # Sort machines by production hours
+    sorted_machines = sorted(
+        machine_stats.items(),
+        key=lambda x: x[1]['total_hours'],
+        reverse=True
+    )
+
+    # Prepare data for charts
+    machine_names = [m[0] for m in sorted_machines]
+    production_hours = [m[1]['total_hours'] for m in sorted_machines]
+    sample_hours = [m[1]['sample_hours'] for m in sorted_machines]
+
+    # Collect item stats
+    item_stats = defaultdict(lambda: {
+        'machines': set(),
+        'total_parts': 0,
+        'total_hours': 0.0,
+        'is_sample': False,
+        'cycle_times': set()
+    })
+
+    for machine, stats in machine_stats.items():
+        for record in stats['records']:
+            item = record['item']
+            item_stats[item]['machines'].add(machine)
+            item_stats[item]['cycle_times'].add(record['cycle_time'])
+            if not record['is_sample']:
+                item_stats[item]['total_parts'] += record['ok_parts']
+                item_stats[item]['total_hours'] += (record['ok_parts'] * record['cycle_time']) / 3600
+            if record['is_sample']:
+                item_stats[item]['is_sample'] = True
+
+    sorted_items = sorted(item_stats.items(), key=lambda x: x[1]['total_hours'], reverse=True)
+
+    # Generate HTML
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CNC Machine Running Time Analysis - {datetime.now().strftime('%Y-%m-%d')}</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+
+        body {{
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #ffffff;
+        }}
+
+        .container {{
+            max-width: 1600px;
+            margin: 0 auto;
+            background: linear-gradient(135deg, #0f3460 0%, #16213e 100%);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(14, 165, 233, 0.3);
+            overflow: hidden;
+            border: 1px solid rgba(14, 165, 233, 0.3);
+        }}
+
+        .header {{
+            background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }}
+
+        .header h1 {{
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }}
+
+        .header .subtitle {{
+            font-size: 1.1rem;
+            opacity: 0.95;
+        }}
+
+        .summary-cards {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            padding: 30px;
+            background: rgba(15, 52, 96, 0.5);
+        }}
+
+        .summary-card {{
+            background: linear-gradient(135deg, var(--card-color, #0ea5e9) 0%, rgba(2, 132, 199, 0.8) 100%);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }}
+
+        .summary-card:hover {{
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(14, 165, 233, 0.4);
+        }}
+
+        .summary-card h3 {{
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }}
+
+        .summary-card .value {{
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }}
+
+        .summary-card .label {{
+            font-size: 0.85rem;
+            opacity: 0.85;
+        }}
+
+        .summary-card.production {{ --card-color: #10b981; }}
+        .summary-card.sample {{ --card-color: #f59e0b; }}
+        .summary-card.total {{ --card-color: #0ea5e9; }}
+        .summary-card.parts {{ --card-color: #8b5cf6; }}
+
+        .content-section {{
+            padding: 30px;
+        }}
+
+        .section-title {{
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            color: #0ea5e9;
+            border-bottom: 2px solid #0ea5e9;
+            padding-bottom: 10px;
+        }}
+
+        .chart-container {{
+            background: rgba(255, 255, 255, 0.05);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }}
+
+        .chart-wrapper {{
+            position: relative;
+            height: 400px;
+            max-height: 500px;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }}
+
+        canvas {{
+            max-height: 400px;
+        }}
+
+        .machine-selector {{
+            width: 100%;
+            padding: 15px;
+            font-size: 1rem;
+            border-radius: 10px;
+            border: 2px solid #0ea5e9;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            margin-bottom: 20px;
+            cursor: pointer;
+        }}
+
+        .machine-selector option {{
+            background: #16213e;
+            color: white;
+        }}
+
+        .machine-details {{
+            background: rgba(255, 255, 255, 0.05);
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }}
+
+        .machine-details h3 {{
+            color: #0ea5e9;
+            margin-bottom: 15px;
+            font-size: 1.4rem;
+        }}
+
+        .detail-grid {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }}
+
+        .detail-item {{
+            background: rgba(14, 165, 233, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #0ea5e9;
+        }}
+
+        .detail-item .label {{
+            font-size: 0.85rem;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }}
+
+        .detail-item .value {{
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #0ea5e9;
+        }}
+
+        .records-table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }}
+
+        .records-table th {{
+            background: rgba(14, 165, 233, 0.2);
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #0ea5e9;
+        }}
+
+        .records-table td {{
+            padding: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }}
+
+        .records-table tr:hover {{
+            background: rgba(14, 165, 233, 0.1);
+        }}
+
+        .sample-badge {{
+            background: #f59e0b;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }}
+
+        .production-badge {{
+            background: #10b981;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }}
+
+        .filter-container {{
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }}
+
+        .filter-input {{
+            flex: 1;
+            min-width: 200px;
+            padding: 12px;
+            border-radius: 10px;
+            border: 2px solid #0ea5e9;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 1rem;
+        }}
+
+        .filter-input::placeholder {{
+            color: rgba(255, 255, 255, 0.5);
+        }}
+
+        .alert-box {{
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }}
+
+        .footer {{
+            background: rgba(15, 52, 96, 0.5);
+            padding: 20px;
+            text-align: center;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚙️ CNC Machine Running Time Analysis</h1>
+            <p class="subtitle">Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | Date Range: {date_range}</p>
+        </div>
+
+        <div class="summary-cards">
+            <div class="summary-card production">
+                <h3>Production Hours</h3>
+                <div class="value">{total_production_hours:.2f}h</div>
+                <div class="label">Excluding samples (480s cycle)</div>
+            </div>
+            <div class="summary-card sample">
+                <h3>Sample Hours</h3>
+                <div class="value">{total_sample_hours:.2f}h</div>
+                <div class="label">480s cycle time only</div>
+            </div>
+            <div class="summary-card total">
+                <h3>Total Hours</h3>
+                <div class="value">{total_all_hours:.2f}h</div>
+                <div class="label">All production time</div>
+            </div>
+            <div class="summary-card parts">
+                <h3>Total Machines</h3>
+                <div class="value">{total_machines}</div>
+                <div class="label">{total_production_parts:,} production parts</div>
+            </div>
+        </div>
+
+        <div class="content-section">
+            <h2 class="section-title">📊 Machine Running Hours Comparison</h2>
+            <div class="chart-container">
+                <div class="chart-wrapper">
+                    <canvas id="machineHoursChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-section">
+            <h2 class="section-title">🔧 Machine Details Breakdown</h2>
+            <select id="machineSelector" class="machine-selector">
+                <option value="">Select a machine to view detailed breakdown...</option>
+                {"".join(f'<option value="{i}">{machine}</option>' for i, (machine, _) in enumerate(sorted_machines))}
+            </select>
+            <div id="machineDetailsContainer"></div>
+        </div>
+
+        <div class="content-section">
+            <h2 class="section-title">📦 Item-Level Production Summary</h2>
+            <div class="filter-container">
+                <input type="text" id="itemFilter" class="filter-input" placeholder="Filter by item name...">
+            </div>
+            <table class="records-table" id="itemTable">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Production Hours</th>
+                        <th>Total Parts</th>
+                        <th>Machines Used</th>
+                        <th>Cycle Times</th>
+                        <th>Type</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {"".join(f'''<tr>
+                        <td>{item}</td>
+                        <td>{stats['total_hours']:.2f}h</td>
+                        <td>{stats['total_parts']:,}</td>
+                        <td>{len(stats['machines'])}</td>
+                        <td>{', '.join(f"{ct}s" for ct in sorted(stats['cycle_times']))}</td>
+                        <td>{'<span class="sample-badge">SAMPLE</span>' if stats['is_sample'] else '<span class="production-badge">PRODUCTION</span>'}</td>
+                    </tr>''' for item, stats in sorted_items)}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="footer">
+            <p>⚠️ Note: Sample parts (cycle time = 480s) are tracked separately and excluded from production hours</p>
+            <p>Running Time Formula: (OK Parts × Cycle Time) / 3600 = Hours</p>
+        </div>
+    </div>
+
+    <script>
+        // Machine data
+        const machineData = {json.dumps({
+            machine: {
+                'name': machine,
+                'production_hours': stats['total_hours'],
+                'sample_hours': stats['sample_hours'],
+                'total_hours': stats['total_hours_with_samples'],
+                'production_parts': stats['total_parts'],
+                'sample_parts': stats['sample_parts'],
+                'total_parts': stats['total_parts_with_samples'],
+                'dates': stats['dates'],
+                'shifts': stats['shifts'],
+                'items': stats['items'],
+                'records': [{
+                    'date': r['date'],
+                    'shift': r['shift'],
+                    'item': r['item'],
+                    'operation': r['operation'],
+                    'ok_parts': r['ok_parts'],
+                    'cycle_time': r['cycle_time'],
+                    'is_sample': r['is_sample'],
+                    'operator': r['operator']
+                } for r in stats['records']]
+            } for machine, stats in machine_stats.items()
+        })};
+
+        // Chart: Machine Hours Comparison
+        const ctx = document.getElementById('machineHoursChart').getContext('2d');
+        new Chart(ctx, {{
+            type: 'bar',
+            data: {{
+                labels: {json.dumps(machine_names)},
+                datasets: [
+                    {{
+                        label: 'Production Hours',
+                        data: {json.dumps(production_hours)},
+                        backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                        borderColor: 'rgba(16, 185, 129, 1)',
+                        borderWidth: 2
+                    }},
+                    {{
+                        label: 'Sample Hours (480s cycle)',
+                        data: {json.dumps(sample_hours)},
+                        backgroundColor: 'rgba(245, 158, 11, 0.8)',
+                        borderColor: 'rgba(245, 158, 11, 1)',
+                        borderWidth: 2
+                    }}
+                ]
+            }},
+            options: {{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {{
+                    legend: {{
+                        labels: {{
+                            color: 'white',
+                            font: {{ size: 14 }}
+                        }}
+                    }},
+                    tooltip: {{
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: 'white',
+                        bodyColor: 'white',
+                        callbacks: {{
+                            afterBody: function(context) {{
+                                const index = context[0].dataIndex;
+                                const machine = Object.keys(machineData)[index];
+                                const data = machineData[machine];
+                                return [
+                                    '',
+                                    'Total: ' + data.total_hours.toFixed(2) + 'h',
+                                    'Production Parts: ' + data.production_parts.toLocaleString(),
+                                    'Sample Parts: ' + data.sample_parts.toLocaleString()
+                                ];
+                            }}
+                        }}
+                    }}
+                }},
+                scales: {{
+                    x: {{
+                        stacked: true,
+                        ticks: {{
+                            color: 'white',
+                            maxRotation: 45,
+                            minRotation: 45
+                        }},
+                        grid: {{
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }}
+                    }},
+                    y: {{
+                        stacked: true,
+                        ticks: {{
+                            color: 'white',
+                            callback: function(value) {{
+                                return value + 'h';
+                            }}
+                        }},
+                        grid: {{
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }},
+                        title: {{
+                            display: true,
+                            text: 'Running Hours',
+                            color: 'white',
+                            font: {{ size: 14 }}
+                        }}
+                    }}
+                }}
+            }}
+        }});
+
+        // Machine selector
+        document.getElementById('machineSelector').addEventListener('change', function() {{
+            const index = parseInt(this.value);
+            const container = document.getElementById('machineDetailsContainer');
+
+            if (isNaN(index)) {{
+                container.innerHTML = '';
+                return;
+            }}
+
+            const machineName = Object.keys(machineData)[index];
+            const data = machineData[machineName];
+
+            let html = `
+                <div class="machine-details">
+                    <h3>${{machineName}}</h3>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <div class="label">Production Hours</div>
+                            <div class="value">${{data.production_hours.toFixed(2)}}h</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="label">Sample Hours</div>
+                            <div class="value">${{data.sample_hours.toFixed(2)}}h</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="label">Total Hours</div>
+                            <div class="value">${{data.total_hours.toFixed(2)}}h</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="label">Production Parts</div>
+                            <div class="value">${{data.production_parts.toLocaleString()}}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="label">Sample Parts</div>
+                            <div class="value">${{data.sample_parts.toLocaleString()}}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="label">Items Produced</div>
+                            <div class="value">${{data.items.length}}</div>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <strong>Active Dates:</strong> ${{data.dates.join(', ')}}
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <strong>Shifts:</strong> ${{data.shifts.join(', ')}}
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <strong>Items:</strong> ${{data.items.join(', ')}}
+                    </div>
+
+                    <h4 style="margin-top: 20px; margin-bottom: 10px; color: #0ea5e9;">Production Records</h4>
+                    <table class="records-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Shift</th>
+                                <th>Item</th>
+                                <th>Operation</th>
+                                <th>Parts</th>
+                                <th>Cycle Time</th>
+                                <th>Hours</th>
+                                <th>Type</th>
+                                <th>Operator</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${{data.records.map(r => `
+                                <tr>
+                                    <td>${{r.date}}</td>
+                                    <td>${{r.shift}}</td>
+                                    <td>${{r.item}}</td>
+                                    <td>${{r.operation}}</td>
+                                    <td>${{r.ok_parts.toLocaleString()}}</td>
+                                    <td>${{r.cycle_time}}s</td>
+                                    <td>${{(r.ok_parts * r.cycle_time / 3600).toFixed(2)}}h</td>
+                                    <td>${{r.is_sample ? '<span class="sample-badge">SAMPLE</span>' : '<span class="production-badge">PRODUCTION</span>'}}</td>
+                                    <td>${{r.operator}}</td>
+                                </tr>
+                            `).join('')}}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }});
+
+        // Item filter
+        document.getElementById('itemFilter').addEventListener('input', function() {{
+            const filter = this.value.toLowerCase();
+            const rows = document.querySelectorAll('#itemTable tbody tr');
+
+            rows.forEach(row => {{
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(filter) ? '' : 'none';
+            }});
+        }});
+    </script>
+</body>
+</html>"""
+
+    with open(output_file, 'w', encoding='utf-8') as f:
+        f.write(html)
+
+    print(f"✅ HTML report saved to: {output_file}")
+
+
 def generate_report(machine_stats, output_file=None):
     """
     Generate a comprehensive report of machine running hours
@@ -378,10 +997,16 @@ def main():
     # Calculate running hours
     machine_stats = calculate_running_hours(all_records, exclude_samples=True)
 
-    # Generate report
+    # Generate reports
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_file = f"cnc_running_hours_report_{timestamp}.txt"
-    generate_report(machine_stats, output_file)
+
+    # Generate HTML report (main output)
+    html_file = f"cnc_running_hours_dashboard_{timestamp}.html"
+    generate_html_report(machine_stats, all_records, html_file)
+
+    # Generate text report (backup)
+    txt_file = f"cnc_running_hours_report_{timestamp}.txt"
+    generate_report(machine_stats, txt_file)
 
     # Also save JSON data for further analysis
     json_file = f"cnc_running_hours_data_{timestamp}.json"
@@ -406,7 +1031,8 @@ def main():
     print(f"✅ JSON data saved to: {json_file}")
     print()
     print("=" * 70)
-    print("Analysis complete!")
+    print("🎉 Analysis complete!")
+    print(f"📊 Open the HTML dashboard: {html_file}")
 
 
 if __name__ == "__main__":
