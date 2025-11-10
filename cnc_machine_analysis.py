@@ -184,6 +184,7 @@ def calculate_running_hours(records, exclude_samples=True):
         'total_seconds': 0.0,
         'total_seconds_with_samples': 0.0,
         'sample_seconds': 0.0,
+        'has_samples': False,
         'records': [],
         'dates': set(),
         'items': set(),
@@ -197,31 +198,31 @@ def calculate_running_hours(records, exclude_samples=True):
         is_sample = record['is_sample']
 
         # Calculate running time in seconds
-        running_seconds = ok_parts * cycle_time
-
-        # Always track total with samples
-        machine_stats[machine]['total_parts_with_samples'] += ok_parts
-        machine_stats[machine]['total_seconds_with_samples'] += running_seconds
-        machine_stats[machine]['dates'].add(record['date'])
-        machine_stats[machine]['items'].add(record['item'])
-        machine_stats[machine]['shifts'].add(record['shift'])
-
-        # Track samples separately
+        # For sample parts (480 min), just count 480 minutes ONCE, not per part
         if is_sample:
+            running_seconds = 0  # Don't add to running time
+            if not machine_stats[machine]['has_samples']:
+                # First time seeing samples for this machine, add 480 min = 8 hours
+                machine_stats[machine]['sample_seconds'] = 28800.0  # 480 min * 60 sec = 28,800 sec
+                machine_stats[machine]['has_samples'] = True
             machine_stats[machine]['sample_parts'] += ok_parts
-            machine_stats[machine]['sample_seconds'] += running_seconds
         else:
-            # Only count production parts if not excluding samples
+            running_seconds = ok_parts * cycle_time
             machine_stats[machine]['total_parts'] += ok_parts
             machine_stats[machine]['total_seconds'] += running_seconds
 
+        # Always track total with samples
+        machine_stats[machine]['total_parts_with_samples'] += ok_parts
+        machine_stats[machine]['dates'].add(record['date'])
+        machine_stats[machine]['items'].add(record['item'])
+        machine_stats[machine]['shifts'].add(record['shift'])
         machine_stats[machine]['records'].append(record)
 
     # Convert seconds to hours
     for machine, stats in machine_stats.items():
         stats['total_hours'] = stats['total_seconds'] / 3600
-        stats['total_hours_with_samples'] = stats['total_seconds_with_samples'] / 3600
         stats['sample_hours'] = stats['sample_seconds'] / 3600
+        stats['total_hours_with_samples'] = (stats['total_seconds'] + stats['sample_seconds']) / 3600
         stats['dates'] = sorted(list(stats['dates']))
         stats['items'] = sorted(list(stats['items']))
         stats['shifts'] = sorted(list(stats['shifts']))
@@ -618,36 +619,25 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
         </div>
 
         <div class="content-section">
-            <h2 class="section-title">📦 Item-Level Production Summary</h2>
-            <div class="filter-container">
-                <input type="text" id="itemFilter" class="filter-input" placeholder="Filter by item name...">
+            <h2 class="section-title">🏭 Parts Production by Machine</h2>
+            <div class="chart-container">
+                <div class="chart-wrapper">
+                    <canvas id="partsChart"></canvas>
+                </div>
             </div>
-            <table class="records-table" id="itemTable">
-                <thead>
-                    <tr>
-                        <th>Item</th>
-                        <th>Production Hours</th>
-                        <th>Total Parts</th>
-                        <th>Machines Used</th>
-                        <th>Cycle Times</th>
-                        <th>Type</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {"".join(f'''<tr>
-                        <td>{item}</td>
-                        <td>{stats['total_hours']:.2f}h</td>
-                        <td>{stats['total_parts']:,}</td>
-                        <td>{len(stats['machines'])}</td>
-                        <td>{', '.join(f"{ct/60:.1f} min" for ct in sorted(stats['cycle_times']))}</td>
-                        <td>{'<span class="sample-badge">SAMPLE</span>' if stats['is_sample'] else '<span class="production-badge">PRODUCTION</span>'}</td>
-                    </tr>''' for item, stats in sorted_items)}
-                </tbody>
-            </table>
+        </div>
+
+        <div class="content-section">
+            <h2 class="section-title">🔄 Production vs Sample Hours</h2>
+            <div class="chart-container">
+                <div class="chart-wrapper">
+                    <canvas id="hoursComparisonChart"></canvas>
+                </div>
+            </div>
         </div>
 
         <div class="footer">
-            <p>⚠️ Note: Sample parts (cycle time = 480 minutes / 8 hours) are tracked separately and excluded from production hours</p>
+            <p>⚠️ Note: Sample parts (480 minutes / 8 hours) counted ONCE per machine, not multiplied by parts</p>
             <p>Running Time Formula: (OK Parts × Cycle Time in minutes × 60) / 3600 = Hours</p>
         </div>
     </div>
@@ -855,15 +845,122 @@ def generate_html_report(machine_stats, all_records, output_file, month_filter='
             container.innerHTML = html;
         }});
 
-        // Item filter
-        document.getElementById('itemFilter').addEventListener('input', function() {{
-            const filter = this.value.toLowerCase();
-            const rows = document.querySelectorAll('#itemTable tbody tr');
+        // Chart: Parts Production by Machine
+        const partsCtx = document.getElementById('partsChart').getContext('2d');
+        const machinePartsData = Object.entries(machineData).sort((a, b) => b[1].production_parts - a[1].production_parts);
+        new Chart(partsCtx, {{
+            type: 'bar',
+            data: {{
+                labels: machinePartsData.map(([name, _]) => name),
+                datasets: [
+                    {{
+                        label: 'Production Parts',
+                        data: machinePartsData.map(([_, data]) => data.production_parts),
+                        backgroundColor: 'rgba(220, 38, 38, 0.8)',
+                        borderColor: 'rgba(220, 38, 38, 1)',
+                        borderWidth: 2
+                    }},
+                    {{
+                        label: 'Sample Parts',
+                        data: machinePartsData.map(([_, data]) => data.sample_parts),
+                        backgroundColor: 'rgba(245, 158, 11, 0.8)',
+                        borderColor: 'rgba(245, 158, 11, 1)',
+                        borderWidth: 2
+                    }}
+                ]
+            }},
+            options: {{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {{
+                    legend: {{
+                        display: true,
+                        labels: {{ color: 'white', font: {{ size: 14 }} }}
+                    }},
+                    title: {{
+                        display: true,
+                        text: 'Parts Produced per Machine',
+                        color: 'white',
+                        font: {{ size: 16 }}
+                    }}
+                }},
+                scales: {{
+                    x: {{
+                        ticks: {{
+                            color: 'white',
+                            maxRotation: 45,
+                            minRotation: 45
+                        }},
+                        grid: {{ color: 'rgba(255, 255, 255, 0.1)' }}
+                    }},
+                    y: {{
+                        stacked: true,
+                        ticks: {{
+                            color: 'white',
+                            callback: function(value) {{ return value.toLocaleString(); }}
+                        }},
+                        grid: {{ color: 'rgba(255, 255, 255, 0.1)' }},
+                        title: {{
+                            display: true,
+                            text: 'Parts Count',
+                            color: 'white',
+                            font: {{ size: 14 }}
+                        }}
+                    }}
+                }}
+            }}
+        }});
 
-            rows.forEach(row => {{
-                const text = row.textContent.toLowerCase();
-                row.style.display = text.includes(filter) ? '' : 'none';
-            }});
+        // Chart: Production vs Sample Hours Comparison
+        const comparisonCtx = document.getElementById('hoursComparisonChart').getContext('2d');
+        new Chart(comparisonCtx, {{
+            type: 'doughnut',
+            data: {{
+                labels: ['Production Hours', 'Sample Hours (480 min once per machine)'],
+                datasets: [{{
+                    data: [
+                        {total_production_hours:.2f},
+                        {total_sample_hours:.2f}
+                    ],
+                    backgroundColor: [
+                        'rgba(5, 150, 105, 0.8)',
+                        'rgba(245, 158, 11, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgba(5, 150, 105, 1)',
+                        'rgba(245, 158, 11, 1)'
+                    ],
+                    borderWidth: 2
+                }}]
+            }},
+            options: {{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {{
+                    legend: {{
+                        display: true,
+                        position: 'bottom',
+                        labels: {{ color: 'white', font: {{ size: 14 }}, padding: 20 }}
+                    }},
+                    title: {{
+                        display: true,
+                        text: 'Total Hours Breakdown',
+                        color: 'white',
+                        font: {{ size: 16 }}
+                    }},
+                    tooltip: {{
+                        callbacks: {{
+                            label: function(context) {{
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return `${{label}}: ${{value.toFixed(2)}}h (${{percentage}}%)`;
+                            }}
+                        }}
+                    }}
+                }}
+            }}
         }});
     </script>
 </body>
@@ -935,48 +1032,9 @@ def generate_report(machine_stats, output_file=None):
 
         report_lines.append("")
 
-    # Item-level breakdown
-    report_lines.append("=" * 100)
-    report_lines.append("ITEM-LEVEL PRODUCTION SUMMARY")
-    report_lines.append("-" * 100)
-    report_lines.append("")
-
-    # Collect all unique items across all machines
-    item_stats = defaultdict(lambda: {
-        'machines': set(),
-        'total_parts': 0,
-        'total_hours': 0.0,
-        'is_sample': False,
-        'cycle_times': set()
-    })
-
-    for machine, stats in machine_stats.items():
-        for record in stats['records']:
-            item = record['item']
-            item_stats[item]['machines'].add(machine)
-            item_stats[item]['cycle_times'].add(record['cycle_time'])
-            if not record['is_sample']:
-                item_stats[item]['total_parts'] += record['ok_parts']
-                item_stats[item]['total_hours'] += (record['ok_parts'] * record['cycle_time']) / 3600
-            if record['is_sample']:
-                item_stats[item]['is_sample'] = True
-
-    sorted_items = sorted(item_stats.items(), key=lambda x: x[1]['total_hours'], reverse=True)
-
-    for item, stats in sorted_items:
-        # Convert cycle times from seconds back to minutes for display
-        cycle_times_str = ', '.join(f"{ct/60:.1f} min" for ct in sorted(stats['cycle_times']))
-        sample_flag = " [SAMPLE]" if stats['is_sample'] else ""
-        report_lines.append(f"Item: {item}{sample_flag}")
-        report_lines.append(f"  Production Hours: {stats['total_hours']:.2f} hours")
-        report_lines.append(f"  Total Parts:      {stats['total_parts']:,}")
-        report_lines.append(f"  Machines:         {', '.join(sorted(stats['machines']))}")
-        report_lines.append(f"  Cycle Times:      {cycle_times_str}")
-        report_lines.append("")
-
     # Footer
     report_lines.append("=" * 100)
-    report_lines.append("NOTE: Sample parts (cycle time = 480 minutes / 8 hours) are tracked separately and excluded from production hours")
+    report_lines.append("NOTE: Sample parts (480 minutes / 8 hours) counted ONCE per machine, not multiplied by parts")
     report_lines.append("=" * 100)
 
     report_text = '\n'.join(report_lines)
